@@ -5,15 +5,16 @@ import pandas as pd
 
 # 1. Secure API Key Loading
 try:
+    # Streamlit ke secure secret locker se key uthayega
     GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=GEMINI_API_KEY)
 except Exception:
-    st.error("API Key missing in Streamlit Secrets setup.")
+    st.error("API Key missing in Streamlit Secrets setup. Please verify your Cloud Settings.")
     st.stop()
 
 # 2. Database Initialization
 def init_db():
-    conn = sqlite3.connect("aryan_robot_touch.db")
+    conn = sqlite3.connect("aryan_robot_final.db")
     cursor = conn.cursor()
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS Voice_Logs (
@@ -26,10 +27,10 @@ def init_db():
 
 init_db()
 
-# 3. Web Layout Design & Cyber Theme
-st.set_page_config(page_title="Aryan Touch Robot", page_icon="🤖", layout="wide")
+# 3. Web Layout Design & Futuristic Cyber Theme
+st.set_page_config(page_title="Aryan Robot Coach", page_icon="🤖", layout="wide")
 
-# Custom CSS for UI and Animations
+# Custom CSS Grid for UI Dashboard & Dynamic Robot Body
 st.markdown("""
 <style>
     .robot-stage {
@@ -51,7 +52,7 @@ st.markdown("""
         cursor: pointer;
     }
     .robot-box:active {
-        transform: scale(0.98);
+        transform: scale(0.97);
     }
     .robot-head {
         width: 110px;
@@ -121,10 +122,10 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🤖 Aryan AI: Clickable Cyber-Robot Mentor")
-st.caption("Robot par direct TAP karo aur baat karna shuru karo!")
+st.title("🤖 Aryan AI: Interactive Touch-to-Talk Robot Coach")
+st.caption("Faltu keys aur text boxes deleted. Robot ke body par kahin bhi click karo, apna sentence bolo aur direct response suno!")
 
-# HTML Render of the Clickable Robot Object
+# HTML Render of the Interactive Mechanical Robot Object
 st.markdown("""
 <div class="robot-stage">
     <div class="robot-box" onclick="startListening()">
@@ -135,16 +136,16 @@ st.markdown("""
         <div class="robot-body-frame">
             <div class="robot-core"></div>
         </div>
-        <div id="status-text" class="bot-status">👇 TAP ME TO TALK</div>
+        <div id="status-text" class="bot-status">👇 TAP MY BODY TO TALK</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# Session state configuration
+# Session state initialization for holding user token strings
 if "voice_input" not in st.session_state:
     st.session_state.voice_input = ""
 
-# 🎙️ HTML5 Speech Recognition Script
+# 🎙️ HTML5 Audio Engine & Web Speech Recognizer API
 st.markdown("""
 <script>
 const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
@@ -169,60 +170,47 @@ recognition.onresult = function(event) {
 recognition.onerror = function() {
     const status = document.getElementById("status-text");
     if(status) {
-        status.innerHTML = "❌ ERROR! TAP AGAIN";
+        status.innerHTML = "❌ TRY AGAIN: TAP HERE";
         status.style.color = "#f43f5e";
     }
 };
 </script>
 """, unsafe_allow_html=True)
 
-# Hidden data transfer token bridge (Invisible from UI view)
+# Hidden UI component used as a proxy bridge to map data back into python context
 spoken_text = st.text_input("", key="voice_bridge", label_visibility="collapsed")
 
+# 4. Core LLM Processing and Voice Synthesis
 if spoken_text and spoken_text != st.session_state.voice_input:
     st.session_state.voice_input = spoken_text
     
     with st.spinner(""):
         try:
+            # Using latest 2026 production version framework
             model = genai.GenerativeModel(model_name="gemini-2.5-flash")
             prompt = f"You are Aryan AI, an English coach robot. Reply to this spoken text short and cleanly under 3 lines, then flag grammar mistakes inside brackets: {spoken_text}"
             response = model.generate_content(prompt)
             ai_reply = response.text
         except Exception:
+            # Local fallback loop
             model = genai.GenerativeModel(model_name="gemini-1.5-flash")
             prompt = f"Reply shortly under 3 lines and add grammar corrections: {spoken_text}"
             response = model.generate_content(prompt)
             ai_reply = response.text
 
-    # Conversation Log display
+    # Clear Chat Layout
     st.write("---")
     st.chat_message("user").markdown(f"**You:** {spoken_text}")
     st.chat_message("assistant").markdown(f"**Aryan Robot:** {ai_reply}")
 
-    # 🔊 Fixed Robotic Speech Synth (Escaped double curly braces for safety)
+    # 🔊 HTML5 Voice Player Sync Injection Engine (Double curly braces prevent python compilation crash)
     ss_code = f"""
     <script>
+    window.speechSynthesis.cancel(); // Force reset browser active streams
     var msg = new SpeechSynthesisUtterance({repr(ai_reply)});
     msg.lang = 'en-US';
     msg.pitch = 0.85;
-    msg.rate = 1.05;
+    msg.rate = 1.0;
     window.speechSynthesis.speak(msg);
     
     const status = document.getElementById("status-text");
-    if(status) {{
-        status.innerHTML = "👇 TAP ME TO TALK";
-        status.style.color = "#38bdf8";
-    }}
-    </script>
-    """
-    st.markdown(ss_code, unsafe_allow_html=True)
-
-    # Database updates
-    mistake_flag = 1 if "mistake" in ai_reply.lower() or "wrong" in ai_reply.lower() else 0
-    conn = sqlite3.connect("aryan_robot_touch.db")
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO Voice_Logs (user_msg, ai_reply, mistake) VALUES (?, ?, ?)", (spoken_text, ai_reply, mistake_flag))
-    conn.commit()
-    conn.close()
-    
-    st.rerun()

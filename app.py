@@ -3,12 +3,12 @@ import google.generativeai as genai
 import sqlite3
 import pandas as pd
 
-# 1. API Configuration (Using Secure Secrets Engine)
+# 1. API Configuration
 try:
     GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=GEMINI_API_KEY)
 except Exception as e:
-    st.error("API Key missing in Streamlit Secrets setup. Please configure it in Settings.")
+    st.error("API Key missing in Streamlit Secrets setup.")
     st.stop()
 
 # 2. Database Initialization
@@ -26,7 +26,7 @@ def init_db():
 
 init_db()
 
-# 3. AI Model Setup
+# 3. AI Model Setup (Foolproof Model Fallback)
 SYSTEM_INSTRUCTION = """
 You are 'Aryan AI', an elite corporate English communication coach. Talk professionally and guide the user like a mentor.
 At the end of your response, ALWAYS provide this exact structured section:
@@ -34,7 +34,19 @@ At the end of your response, ALWAYS provide this exact structured section:
 [GRAMMAR CHECK]: Point out mistakes and give corrected version. If none, say "Perfect Grammar!".
 [SMARTER VOCABULARY]: Suggest 2 advanced business words for their sentence.
 """
-model = genai.GenerativeModel(model_name="gemini-1.5-flash-latest", system_instruction=SYSTEM_INSTRUCTION)
+
+# Dynamic model handling to bypass any version issues
+try:
+    model = genai.GenerativeModel(
+        model_name="gemini-1.5-flash", 
+        system_instruction=SYSTEM_INSTRUCTION
+    )
+except Exception:
+    model = genai.GenerativeModel(
+        model_name="models/gemini-1.5-flash", 
+        system_instruction=SYSTEM_INSTRUCTION
+    )
+
 # 4. Streamlit Web UI Layout Design
 st.set_page_config(page_title="Aryan AI Coach", page_icon="🎯", layout="wide")
 
@@ -76,12 +88,12 @@ if user_input := st.chat_input("Type your English sentence here..."):
     with st.chat_message("assistant"):
         with st.spinner("Aryan is analyzing your sentence structure..."):
             try:
-                chat_stream = model.start_chat(history=[])
-                response = chat_stream.send_message(user_input)
+                # Direct generate content loop to avoid session crashes
+                response = model.generate_content(user_input)
                 ai_response_text = response.text
                 st.markdown(ai_response_text)
             except Exception as api_err:
-                st.error(f"AI Service Error: {api_err}. Please check if the API key in Streamlit secrets is valid.")
+                st.error(f"AI Service Error: {api_err}. Please ensure your API key in Secrets is completely correct.")
                 st.stop()
             
     st.session_state.chat_history.append({"role": "assistant", "text": ai_response_text})

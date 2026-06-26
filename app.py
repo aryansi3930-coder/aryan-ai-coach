@@ -13,7 +13,7 @@ except Exception:
 
 # 2. Database Initialization
 def init_db():
-    conn = sqlite3.connect("aryan_voice_analytics.db")
+    conn = sqlite3.connect("aryan_voice_avatar.db")
     cursor = conn.cursor()
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS Voice_Logs (
@@ -26,35 +26,97 @@ def init_db():
 
 init_db()
 
-# 3. Web Layout Design
-st.set_page_config(page_title="Aryan Voice AI Coach", page_icon="🎙️", layout="wide")
-st.title("🎙️ Aryan AI: Voice English Practice Platform")
-st.caption("Mic ON karo, English me baat karo, aur Aryan se bolkar feedback suno!")
+# 3. Web Layout Design & Theme
+st.set_page_config(page_title="Aryan AI Voice Teacher", page_icon="👨‍🏫", layout="wide")
 
-# Sidebar Scorecard
-st.sidebar.title("📊 Practice Scorecard")
-conn = sqlite3.connect("aryan_voice_analytics.db")
-df = pd.read_sql_query("SELECT * FROM Voice_Logs", conn)
-conn.close()
+# Custom CSS for the AI Teacher's Body and Visual Feeling
+st.markdown("""
+<style>
+    .teacher-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        padding: 30px;
+        border-radius: 20px;
+        box-shadow: 0px 10px 25px rgba(0,0,0,0.3);
+        margin-bottom: 25px;
+        color: white;
+        text-align: center;
+    }
+    .avatar-body {
+        width: 140px;
+        height: 140px;
+        background-color: #ffffff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 75px;
+        border: 5px solid #00d2ff;
+        box-shadow: 0 0 20px #00d2ff;
+        animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+        100% { transform: translateY(0px); }
+    }
+    .status-badge {
+        background-color: #00d2ff;
+        color: #1e3c72;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-weight: bold;
+        margin-top: 15px;
+        font-size: 14px;
+        letter-spacing: 1px;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-if not df.empty:
-    total_chats = len(df)
-    total_errors = df['mistake'].sum()
-    accuracy = round(((total_chats - total_errors) / total_chats) * 100, 1)
-    st.sidebar.metric(label="Sentences Spoken", value=total_chats)
-    st.sidebar.metric(label="Pronunciation/Grammar Score", value=f"{accuracy}%")
-    st.sidebar.bar_chart(df['mistake'])
-else:
-    st.sidebar.info("Speak something to kickstart the dashboard!")
+st.title("🎯 Aryan AI: Interactive Voice English Teacher")
+st.caption("Ab rona-dhona band! Saamne aapka digital corporate mentor khada hai. Mic dabaao aur baatein shuru karo.")
+
+# Layout splitting: Left for Avatar Teacher, Right for Analytics Scorecard
+col1, col2 = st.columns([2, 1])
+
+with col1:
+    # 👨‍🏫 THE AI TEACHER'S PHYSICAL FRAME BODY
+    st.markdown("""
+    <div class="teacher-container">
+        <div class="avatar-body">👨‍💼</div>
+        <h2 style='margin-top:10px; color:white;'>Aryan AI Coach</h2>
+        <p style='color:#e0e0e0; font-style: italic;'>\"I am listening to your sentence structure. Speak naturally!\"</p>
+        <div class="status-badge">ONLINE & READY</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col2:
+    # Sidebar / Analytics Panel
+    st.markdown("### 📊 Performance Analytics")
+    conn = sqlite3.connect("aryan_web_analytics.db")
+    try:
+        df = pd.read_sql_query("SELECT * FROM Web_Logs", conn)
+    except:
+        df = pd.DataFrame()
+    conn.close()
+
+    if not df.empty:
+        total_chats = len(df)
+        total_errors = df['mistake'].sum()
+        accuracy = round(((total_chats - total_errors) / total_chats) * 100, 1)
+        st.metric(label="Sentences Practiced", value=total_chats)
+        st.metric(label="Communication Accuracy Score", value=f"{accuracy}%")
+    else:
+        st.info("Speak to activate metrics card!")
 
 # Initialize session states
 if "voice_input" not in st.session_state:
     st.session_state.voice_input = ""
-if "ai_speech" not in st.session_state:
-    st.session_state.ai_speech = ""
 
-# 🛠️ JavaScript Interface for Mobile Mic & Speaker
-# This injects a native HTML5 browser mic listener directly into the app frame
+# JavaScript Browser Audio Interface
 st.markdown("""
 <script>
 const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
@@ -72,39 +134,35 @@ recognition.onresult = function(event) {
 </script>
 """, unsafe_allow_html=True)
 
-# Main Voice Trigger Button
-st.subheader("Tap the button below and start speaking:")
-if st.button("🎤 Click here to SPEAK (Tap to Talk)", use_container_width=True):
+# Audio Control Hub
+st.write("---")
+if st.button("🎙️ TAP TO TALK (Speak Now)", use_container_width=True):
     st.markdown("""<script>startListening();</script>""", unsafe_allow_html=True)
-    st.info("Listening to your voice... Speak now in English!")
+    st.warning("🔴 Aryan is listening to your speech... Say something in English!")
 
-# Bridge to catch JavaScript audio-to-text response
-spoken_text = st.text_input("Transcribed Voice Output:", key="voice_bridge", label_visibility="collapsed")
+# Dynamic voice data ingestion deck
+spoken_text = st.text_input("Voice Token Output:", key="voice_bridge", label_visibility="collapsed")
 
-# 4. Engine Processing & Audio Synthesis Loop
 if spoken_text and spoken_text != st.session_state.voice_input:
     st.session_state.voice_input = spoken_text
     
-    # Process with Generative Model
-    with st.spinner("Aryan is listening and analyzing your accent..."):
+    with st.spinner("Aryan is evaluating your grammar style..."):
         try:
-            # Fallback model selection architecture
             model = genai.GenerativeModel(model_name="gemini-1.5-flash")
             prompt = f"You are Aryan AI, an English coach. Reply to this spoken text short and cleanly under 3 lines, then flag grammar mistakes inside brackets: {spoken_text}"
             response = model.generate_content(prompt)
             ai_reply = response.text
         except Exception:
-            model = genai.GenerativeModel(model_name="gemini-1.5-flash-latest")
+            model = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
             prompt = f"Reply shortly under 3 lines and add grammar corrections: {spoken_text}"
             response = model.generate_content(prompt)
             ai_reply = response.text
 
-    # Display Text Layout
-    st.chat_message("user").markdown(f"**You Said:** {spoken_text}")
-    st.chat_message("assistant").markdown(ai_reply)
+    # Show conversational layout
+    st.chat_message("user").markdown(f"**You:** {spoken_text}")
+    st.chat_message("assistant").markdown(f"**Aryan AI Teacher:** {ai_reply}")
 
-    # 🔊 HTML5 Voice Output (Text-To-Speech Speaker Engine)
-    # This reads back Aryan's reply directly via the user's mobile/laptop speaker safely
+    # 🔊 Real-time Speech Synth Engine Response
     ss_code = f"""
     <script>
     var msg = new SpeechSynthesisUtterance({repr(ai_reply)});
@@ -114,11 +172,11 @@ if spoken_text and spoken_text != st.session_state.voice_input:
     """
     st.markdown(ss_code, unsafe_allow_html=True)
 
-    # Save to SQL
+    # Database Commits
     mistake_flag = 1 if "mistake" in ai_reply.lower() or "wrong" in ai_reply.lower() else 0
-    conn = sqlite3.connect("aryan_voice_analytics.db")
+    conn = sqlite3.connect("aryan_web_analytics.db")
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO Voice_Logs (user_msg, ai_reply, mistake) VALUES (?, ?, ?)", (spoken_text, ai_reply, mistake_flag))
+    cursor.execute("INSERT INTO Web_Logs (user_msg, ai_reply, mistake) VALUES (?, ?, ?)", (spoken_text, ai_reply, mistake_flag))
     conn.commit()
     conn.close()
     

@@ -13,7 +13,7 @@ except Exception:
 
 # 2. Database Initialization
 def init_db():
-    conn = sqlite3.connect("aryan_real_avatar.db")
+    conn = sqlite3.connect("aryan_robot_avatar.db")
     cursor = conn.cursor()
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS Voice_Logs (
@@ -26,84 +26,123 @@ def init_db():
 
 init_db()
 
-# 3. Web Layout Design & Theme
-st.set_page_config(page_title="Aryan AI Real Coach", page_icon="👔", layout="wide")
+# 3. Web Layout Design & Cyber Theme
+st.set_page_config(page_title="Aryan Cyber Robot", page_icon="🤖", layout="wide")
 
-# Custom CSS for Realistic Human Coach Experience
+# 🛠️ REAL INTERACTIVE CSS ROBOT BODY CODE
+# Yeh poora custom code ek 3D stylized neon robot engine generate karta hai jo animation loop par chalta hai
 st.markdown("""
 <style>
-    .real-teacher-card {
+    .robot-stage {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: radial-gradient(circle, #0f172a 0%, #020617 100%);
+        padding: 40px;
+        border-radius: 20px;
+        border: 2px solid #1e293b;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+        max-width: 500px;
+        margin: 0 auto 20px auto;
+    }
+    .robot-box {
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
-        background: #111827;
-        padding: 25px;
-        border-radius: 15px;
-        box-shadow: 0px 15px 35px rgba(0,0,0,0.5);
-        border: 2px solid #374151;
-        color: white;
-        text-align: center;
-        max-width: 450px;
-        margin: 0 auto;
+        cursor: pointer;
     }
-    .avatar-img {
-        width: 220px;
-        height: 220px;
-        border-radius: 12px;
-        object-fit: cover;
-        border: 3px solid #10B981;
-        box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+    /* Breathing Motion Animation for Real Robot Feeling */
+    .robot-head {
+        width: 100px;
+        height: 85px;
+        background: linear-gradient(135deg, #38bdf8 0%, #0369a1 100%);
+        border-radius: 20px 20px 10px 10px;
+        border: 4px solid #0f172a;
+        position: relative;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        padding: 0 15px;
+        box-shadow: 0 0 25px rgba(56, 189, 248, 0.5);
+        animation: floatHead 3s ease-in-out infinite;
     }
-    .status-dot {
-        height: 10px;
-        width: 10px;
-        background-color: #10B981;
+    .robot-eye {
+        width: 20px;
+        height: 20px;
+        background-color: #00f2fe;
         border-radius: 50%;
-        display: inline-block;
-        margin-right: 8px;
+        box-shadow: 0 0 15px #00f2fe, inset 0 0 5px #fff;
+        animation: blink 4s infinite;
+    }
+    .robot-body-frame {
+        width: 130px;
+        height: 110px;
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border: 4px solid #38bdf8;
+        border-radius: 15px;
+        margin-top: 10px;
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        box-shadow: inset 0 0 20px rgba(56, 189, 248, 0.2), 0 10px 20px rgba(0,0,0,0.5);
+    }
+    .robot-core {
+        width: 45px;
+        height: 45px;
+        background: radial-gradient(circle, #00f2fe 0%, #4facfe 100%);
+        border-radius: 50%;
+        box-shadow: 0 0 20px #00f2fe;
+        animation: pulseCore 1.5s alternate infinite;
+    }
+    @keyframes floatHead {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-8px); }
+        100% { transform: translateY(0px); }
+    }
+    @keyframes pulseCore {
+        0% { transform: scale(0.9); opacity: 0.6; box-shadow: 0 0 10px #00f2fe; }
+        100% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 25px #00f2fe; }
+    }
+    @keyframes blink {
+        0%, 90%, 100% { transform: scaleY(1); }
+        95% { transform: scaleY(0.1); }
+    }
+    .bot-status {
+        color: #38bdf8;
+        font-family: monospace;
+        font-size: 14px;
+        margin-top: 15px;
+        letter-spacing: 2px;
+        text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
     }
 </style>
 """, unsafe_allow_html=True)
 
-st.title("👔 Aryan AI: Real Human-Style Corporate English Coach")
-st.caption("Aapka personal communication mentor. Mic ON kijiye aur bina hichkichahat ke baat kijiye.")
+st.title("🤖 Aryan AI: Living Voice-to-Voice Cyber Robot")
+st.caption("No images, no cartoons. Saamne active mechanical robot code engine hai. Direct bolo aur robot voice me feedback suno!")
 
-col1, col2 = st.columns([2, 1])
-
-with col1:
-    # 👨‍💼 REAL HUMAN AVATAR BODY (Using a high-quality realistic professional portrait)
-    st.markdown("""
-    <div class="real-teacher-card">
-        <img class="avatar-img" src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=400" alt="Aryan AI Coach">
-        <h3 style='margin-top:15px; margin-bottom:5px; color:#F9FAFB;'>Aryan AI (Senior Corporate Trainer)</h3>
-        <p style='color:#9CA3AF; font-size:14px; font-style:italic;'>\"Let's practice your mock interview answers. I'm listening.\"</p>
-        <div style='margin-top:10px; font-size:12px; color:#10B981; font-weight:bold;'>
-            <span class="status-dot"></span>LIVE & READY TO TALK
+# HTML Render of the Interactive Robot Object
+st.markdown("""
+<div class="robot-stage">
+    <div class="robot-box" onclick="startListening()">
+        <div class="robot-head">
+            <div class="robot-eye"></div>
+            <div class="robot-eye"></div>
         </div>
+        <div class="robot-body-frame">
+            <div class="robot-core"></div>
+        </div>
+        <div class="bot-status">🤖 ARYAN ACTIVE & LISTENING</div>
     </div>
-    """, unsafe_allow_html=True)
+</div>
+""", unsafe_allow_html=True)
 
-with col2:
-    # Analytics Panel
-    st.markdown("### 📊 Live Scorecard")
-    conn = sqlite3.connect("aryan_real_avatar.db")
-    try:
-        df = pd.read_sql_query("SELECT * FROM Voice_Logs", conn)
-    except:
-        df = pd.DataFrame()
-    conn.close()
+# Initialize Session States safely
+if "voice_input" not in st.session_state:
+    st.session_state.voice_input = ""
 
-    if not df.empty:
-        total_chats = len(df)
-        total_errors = df['mistake'].sum()
-        accuracy = round(((total_chats - total_errors) / total_chats) * 100, 1)
-        st.metric(label="Sentences Analyzed", value=total_chats)
-        st.metric(label="Fluency & Grammar Rating", value=f"{accuracy}%")
-    else:
-        st.info("Aapki accuracy rating yahan real-time me chalegi.")
-
-# JavaScript Browser Audio Interface
+# 🎙️ HTML5 Voice Bridge Injection
 st.markdown("""
 <script>
 const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
@@ -122,44 +161,48 @@ recognition.onresult = function(event) {
 """, unsafe_allow_html=True)
 
 st.write("---")
-if st.button("🎙️ CLICK TO START SPEAKING", use_container_width=True):
+# Primary System Activation Core Trigger
+if st.button("🎤 CLICK HERE TO ACTIVATE ROBOT MIC & TALK", use_container_width=True):
     st.markdown("""<script>startListening();</script>""", unsafe_allow_html=True)
-    st.warning("🔴 Aryan is listening... Speak now!")
+    st.info("System Triggered: Speak now into your microphone...")
 
-spoken_text = st.text_input("Voice Input:", key="voice_bridge", label_visibility="collapsed")
+spoken_text = st.text_input("Robot Input Processing:", key="voice_bridge", label_visibility="collapsed")
 
 if spoken_text and spoken_text != st.session_state.voice_input:
     st.session_state.voice_input = spoken_text
     
-    with st.spinner("Aryan is evaluating your grammar style..."):
+    with st.spinner("Robot logic analyzing frequency metrics..."):
         try:
-            model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-            prompt = f"You are Aryan AI, an English coach. Reply to this spoken text short and cleanly under 3 lines, then flag grammar mistakes inside brackets: {spoken_text}"
+            model = genai.GenerativeModel(model_name="gemini-2.5-flash")
+            prompt = f"You are Aryan AI, an English coach robot. Reply to this spoken text short and cleanly under 3 lines, then flag grammar mistakes inside brackets: {spoken_text}"
             response = model.generate_content(prompt)
             ai_reply = response.text
         except Exception:
-            model = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
+            model = genai.GenerativeModel(model_name="gemini-1.5-flash")
             prompt = f"Reply shortly under 3 lines and add grammar corrections: {spoken_text}"
             response = model.generate_content(prompt)
             ai_reply = response.text
 
-    # Conversation Output Panels
-    st.chat_message("user").markdown(f"**Aapne Kaha:** {spoken_text}")
-    st.chat_message("assistant").markdown(f"**Aryan AI Teacher:** {ai_reply}")
+    # Console display deck
+    st.chat_message("user").markdown(f"**You Spoke:** {spoken_text}")
+    st.chat_message("assistant").markdown(f"**Aryan Robot:** {ai_reply}")
 
-    # Text-To-Speech Speaker Engine Response
+    # 🔊 Mechanical Robotic Voice Response
     ss_code = f"""
     <script>
     var msg = new SpeechSynthesisUtterance({repr(ai_reply)});
     msg.lang = 'en-US';
+    // Tuning pitch and rate variables to produce a clean futuristic mechanical robotic sound profile
+    msg.pitch = 0.8;
+    msg.rate = 1.0;
     window.speechSynthesis.speak(msg);
     </script>
     """
     st.markdown(ss_code, unsafe_allow_html=True)
 
-    # Database Commits
+    # Logging Metrics
     mistake_flag = 1 if "mistake" in ai_reply.lower() or "wrong" in ai_reply.lower() else 0
-    conn = sqlite3.connect("aryan_real_avatar.db")
+    conn = sqlite3.connect("aryan_robot_avatar.db")
     cursor = conn.cursor()
     cursor.execute("INSERT INTO Voice_Logs (user_msg, ai_reply, mistake) VALUES (?, ?, ?)", (spoken_text, ai_reply, mistake_flag))
     conn.commit()

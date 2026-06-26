@@ -3,20 +3,20 @@ import google.generativeai as genai
 import sqlite3
 import pandas as pd
 
-# 1. API Configuration
+# 1. Secure API Key Loading
 try:
     GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=GEMINI_API_KEY)
-except Exception as e:
+except Exception:
     st.error("API Key missing in Streamlit Secrets setup.")
     st.stop()
 
 # 2. Database Initialization
 def init_db():
-    conn = sqlite3.connect("aryan_web_analytics.db")
+    conn = sqlite3.connect("aryan_voice_analytics.db")
     cursor = conn.cursor()
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS Web_Logs (
+    CREATE TABLE IF NOT EXISTS Voice_Logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_msg TEXT, ai_reply TEXT, mistake INTEGER
     )
@@ -26,75 +26,99 @@ def init_db():
 
 init_db()
 
-# 3. AI Model Setup (Using Updated 2026 Production Model)
-SYSTEM_INSTRUCTION = """
-You are 'Aryan AI', an elite corporate English communication coach. Talk professionally and guide the user like a mentor.
-At the end of your response, ALWAYS provide this exact structured section:
----
-[GRAMMAR CHECK]: Point out mistakes and give corrected version. If none, say "Perfect Grammar!".
-[SMARTER VOCABULARY]: Suggest 2 advanced business words for their sentence.
-"""
+# 3. Web Layout Design
+st.set_page_config(page_title="Aryan Voice AI Coach", page_icon="🎙️", layout="wide")
+st.title("🎙️ Aryan AI: Voice English Practice Platform")
+st.caption("Mic ON karo, English me baat karo, aur Aryan se bolkar feedback suno!")
 
-# Swapped directly to gemini-2.5-flash to bypass legacy 404 block
-model = genai.GenerativeModel(
-    model_name="gemini-2.5-flash", 
-    system_instruction=SYSTEM_INSTRUCTION
-)
-
-# 4. Streamlit Web UI Layout Design
-st.set_page_config(page_title="Aryan AI Coach", page_icon="🎯", layout="wide")
-
-st.title("🎯 Aryan AI: Professional English Practice Platform")
-st.caption("Welcome! I am Aryan, your personal AI Coach. Let's sharpen your corporate communication skills together.")
-
-# Sidebar for Analytics Dashboard
-st.sidebar.title("📊 Aryan's Analytics Board")
-conn = sqlite3.connect("aryan_web_analytics.db")
-df = pd.read_sql_query("SELECT * FROM Web_Logs", conn)
+# Sidebar Scorecard
+st.sidebar.title("📊 Practice Scorecard")
+conn = sqlite3.connect("aryan_voice_analytics.db")
+df = pd.read_sql_query("SELECT * FROM Voice_Logs", conn)
 conn.close()
 
 if not df.empty:
     total_chats = len(df)
     total_errors = df['mistake'].sum()
     accuracy = round(((total_chats - total_errors) / total_chats) * 100, 1)
-    
-    st.sidebar.metric(label="Total Sentences Practiced", value=total_chats)
-    st.sidebar.metric(label="Grammar Accuracy Score", value=f"{accuracy}%")
-    
-    st.sidebar.subheader("Your Progress Trend")
+    st.sidebar.metric(label="Sentences Spoken", value=total_chats)
+    st.sidebar.metric(label="Pronunciation/Grammar Score", value=f"{accuracy}%")
     st.sidebar.bar_chart(df['mistake'])
 else:
-    st.sidebar.info("Start chatting to activate your dashboard tracker!")
+    st.sidebar.info("Speak something to kickstart the dashboard!")
 
-# Chat Interface Setup
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
+# Initialize session states
+if "voice_input" not in st.session_state:
+    st.session_state.voice_input = ""
+if "ai_speech" not in st.session_state:
+    st.session_state.ai_speech = ""
 
-for chat in st.session_state.chat_history:
-    with st.chat_message(chat["role"]):
-        st.markdown(chat["text"])
+# 🛠️ JavaScript Interface for Mobile Mic & Speaker
+# This injects a native HTML5 browser mic listener directly into the app frame
+st.markdown("""
+<script>
+const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+recognition.lang = 'en-US';
+recognition.interimResults = false;
 
-if user_input := st.chat_input("Type your English sentence here..."):
-    with st.chat_message("user"):
-        st.markdown(user_input)
-    st.session_state.chat_history.append({"role": "user", "text": user_input})
+function startListening() {
+    recognition.start();
+}
+
+recognition.onresult = function(event) {
+    const textResult = event.results[0][0].transcript;
+    parent.postMessage({type: 'streamlit:set_widget_value', id: 'voice_bridge', value: textResult}, '*');
+};
+</script>
+""", unsafe_allow_html=True)
+
+# Main Voice Trigger Button
+st.subheader("Tap the button below and start speaking:")
+if st.button("🎤 Click here to SPEAK (Tap to Talk)", use_container_width=True):
+    st.markdown("""<script>startListening();</script>""", unsafe_allow_html=True)
+    st.info("Listening to your voice... Speak now in English!")
+
+# Bridge to catch JavaScript audio-to-text response
+spoken_text = st.text_input("Transcribed Voice Output:", key="voice_bridge", label_visibility="collapsed")
+
+# 4. Engine Processing & Audio Synthesis Loop
+if spoken_text and spoken_text != st.session_state.voice_input:
+    st.session_state.voice_input = spoken_text
     
-    with st.chat_message("assistant"):
-        with st.spinner("Aryan is analyzing your sentence structure..."):
-            try:
-                response = model.generate_content(user_input)
-                ai_response_text = response.text
-                st.markdown(ai_response_text)
-            except Exception as api_err:
-                st.error(f"AI Service Error: {api_err}. Please ensure your API key in Secrets is completely correct.")
-                st.stop()
-            
-    st.session_state.chat_history.append({"role": "assistant", "text": ai_response_text})
-    
-    mistake_flag = 1 if "[GRAMMAR CHECK]" in ai_response_text and "Perfect Grammar!" not in ai_response_text else 0
-    conn = sqlite3.connect("aryan_web_analytics.db")
+    # Process with Generative Model
+    with st.spinner("Aryan is listening and analyzing your accent..."):
+        try:
+            # Fallback model selection architecture
+            model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+            prompt = f"You are Aryan AI, an English coach. Reply to this spoken text short and cleanly under 3 lines, then flag grammar mistakes inside brackets: {spoken_text}"
+            response = model.generate_content(prompt)
+            ai_reply = response.text
+        except Exception:
+            model = genai.GenerativeModel(model_name="gemini-1.5-flash-latest")
+            prompt = f"Reply shortly under 3 lines and add grammar corrections: {spoken_text}"
+            response = model.generate_content(prompt)
+            ai_reply = response.text
+
+    # Display Text Layout
+    st.chat_message("user").markdown(f"**You Said:** {spoken_text}")
+    st.chat_message("assistant").markdown(ai_reply)
+
+    # 🔊 HTML5 Voice Output (Text-To-Speech Speaker Engine)
+    # This reads back Aryan's reply directly via the user's mobile/laptop speaker safely
+    ss_code = f"""
+    <script>
+    var msg = new SpeechSynthesisUtterance({repr(ai_reply)});
+    msg.lang = 'en-US';
+    window.speechSynthesis.speak(msg);
+    </script>
+    """
+    st.markdown(ss_code, unsafe_allow_html=True)
+
+    # Save to SQL
+    mistake_flag = 1 if "mistake" in ai_reply.lower() or "wrong" in ai_reply.lower() else 0
+    conn = sqlite3.connect("aryan_voice_analytics.db")
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO Web_Logs (user_msg, ai_reply, mistake) VALUES (?, ?, ?)", (user_input, ai_response_text, mistake_flag))
+    cursor.execute("INSERT INTO Voice_Logs (user_msg, ai_reply, mistake) VALUES (?, ?, ?)", (spoken_text, ai_reply, mistake_flag))
     conn.commit()
     conn.close()
     

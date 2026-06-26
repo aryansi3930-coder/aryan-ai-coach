@@ -5,7 +5,7 @@ import sqlite3
 import pandas as pd
 
 # 1. API Configuration
-GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE"  # ⚠️ Apni API key yahan fir se daal dena bhai
+GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE"
 genai.configure(api_key=GEMINI_API_KEY)
 
 # 2. Database Initialization

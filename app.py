@@ -1,20 +1,6 @@
 import streamlit as st
-import sqlite3
-import pandas as pd
-import os
-import subprocess
-import sys
-
-# 🔥 AUTO-INSTALL ENGINE: Agar gTTS nahi mila, toh code khud download karega!
-try:
-    from gtts import gTTS
-except ModuleNotFoundError:
-    with st.spinner("Initializing Audio Components... Please wait a moment."):
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "gTTS"])
-        from gtts import gTTS
-        st.rerun()
-
 import google.generativeai as genai
+import sqlite3
 
 # 1. Secure API Key Loading
 try:
@@ -26,7 +12,7 @@ except Exception:
 
 # 2. Database Initialization
 def init_db():
-    conn = sqlite3.connect("aryan_robot_native.db")
+    conn = sqlite3.connect("aryan_robot_clean.db")
     cursor = conn.cursor()
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS Voice_Logs (
@@ -42,6 +28,7 @@ init_db()
 # 3. Web Layout Design & Cyber Theme
 st.set_page_config(page_title="Aryan Robot Coach", page_icon="🤖", layout="wide")
 
+# Custom CSS for UI and Animations
 st.markdown("""
 <style>
     .robot-stage {
@@ -107,15 +94,10 @@ st.markdown("""
     @keyframes floatHead {
         0% { transform: translateY(0px); }
         50% { transform: translateY(-8px); }
-        100% { transform: translateY(0px); }
     }
     @keyframes pulseCore {
         0% { transform: scale(0.9); opacity: 0.6; }
         100% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 30px #00f2fe; }
-    }
-    @keyframes blink {
-        0%, 90%, 100% { transform: scaleY(1); }
-        95% { transform: scaleY(0.1); }
     }
     .bot-status {
         color: #38bdf8;
@@ -124,13 +106,12 @@ st.markdown("""
         margin-top: 20px;
         letter-spacing: 2px;
         font-weight: bold;
-        text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
     }
 </style>
 """, unsafe_allow_html=True)
 
 st.title("🤖 Aryan AI: Complete Voice Robot Coach")
-st.caption("Niche diye gaye Mic par click karke record karo, Robot turant sunkar reply bolega!")
+st.caption("No Requirements Needed! Niche diye gaye input me apna audio record karo, Robot khud bolkar reply dega.")
 
 # Visual Robot Model
 st.markdown("""
@@ -160,7 +141,7 @@ if audio_value:
             audio_bytes = audio_value.read()
             
             prompt = [
-                "You are Aryan AI, an English coach robot. Listen to this user audio, transcribe what they said, reply to it shortly under 3 lines, and then flag grammar mistakes inside brackets.",
+                "You are Aryan AI, an English coach robot. Reply to this user audio shortly under 3 lines, then flag grammar mistakes inside brackets.",
                 {"mime_type": "audio/wav", "data": audio_bytes}
             ]
             
@@ -168,18 +149,26 @@ if audio_value:
             ai_reply = response.text
             
             # Show Conversation
+            st.chat_message("user").markdown("**You:** [Audio Sent]")
             st.chat_message("assistant").markdown(f"**Aryan Robot:** {ai_reply}")
             
-            # 🔊 Generate Voice Reply using gTTS
-            tts = gTTS(text=ai_reply, lang='en', tld='com', slow=False)
-            tts.save("reply.mp3")
-            
-            # Play Audio
-            st.audio("reply.mp3", format="audio/mp3", autoplay=True)
+            # 🔊 Web-Safe Text-To-Speech (Zero Libraries Required)
+            clean_reply = ai_reply.replace('"', '\\"').replace('\n', ' ')
+            html_audio_script = f"""
+            <script>
+            window.speechSynthesis.cancel();
+            var msg = new SpeechSynthesisUtterance("{clean_reply}");
+            msg.lang = 'en-US';
+            msg.pitch = 0.9;
+            msg.rate = 1.0;
+            window.speechSynthesis.speak(msg);
+            </script>
+            """
+            st.markdown(html_audio_script, unsafe_allow_html=True)
             
             # Database Save
             mistake_flag = 1 if "mistake" in ai_reply.lower() or "wrong" in ai_reply.lower() else 0
-            conn = sqlite3.connect("aryan_robot_native.db")
+            conn = sqlite3.connect("aryan_robot_clean.db")
             cursor = conn.cursor()
             cursor.execute("INSERT INTO Voice_Logs (user_msg, ai_reply, mistake) VALUES (?, ?, ?)", ("Audio Message", ai_reply, mistake_flag))
             conn.commit()

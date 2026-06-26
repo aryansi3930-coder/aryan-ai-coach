@@ -122,10 +122,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("🤖 Aryan AI: Clickable Cyber-Robot Mentor")
-st.caption("Faltu buttons deleted. Robot par direct TAP karo aur baat karna shuru karo!")
+st.caption("Robot par direct TAP karo aur baat karna shuru karo!")
 
 # HTML Render of the Clickable Robot Object
-# `onclick="startListening()"` direct robot body par set kar diya hai
 st.markdown("""
 <div class="robot-stage">
     <div class="robot-box" onclick="startListening()">
@@ -145,7 +144,7 @@ st.markdown("""
 if "voice_input" not in st.session_state:
     st.session_state.voice_input = ""
 
-# 🎙️ Advanced HTML5 Speech Recognition Script with Dynamic Status Updater
+# 🎙️ HTML5 Speech Recognition Script
 st.markdown("""
 <script>
 const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
@@ -195,12 +194,12 @@ if spoken_text and spoken_text != st.session_state.voice_input:
             response = model.generate_content(prompt)
             ai_reply = response.text
 
-    # Conversation Log display (Minimal Clean Design)
+    # Conversation Log display
     st.write("---")
     st.chat_message("user").markdown(f"**You:** {spoken_text}")
     st.chat_message("assistant").markdown(f"**Aryan Robot:** {ai_reply}")
 
-    # 🔊 Robotic Speech Synth Trigger Loop
+    # 🔊 Fixed Robotic Speech Synth (Escaped double curly braces for safety)
     ss_code = f"""
     <script>
     var msg = new SpeechSynthesisUtterance({repr(ai_reply)});
@@ -209,12 +208,11 @@ if spoken_text and spoken_text != st.session_state.voice_input:
     msg.rate = 1.05;
     window.speechSynthesis.speak(msg);
     
-    // Reset status back to default once processing finishes
     const status = document.getElementById("status-text");
-    if(status) {
+    if(status) {{
         status.innerHTML = "👇 TAP ME TO TALK";
         status.style.color = "#38bdf8";
-    }
+    }}
     </script>
     """
     st.markdown(ss_code, unsafe_allow_html=True)

@@ -34,8 +34,7 @@ At the end of your response, ALWAYS provide this exact structured section:
 [GRAMMAR CHECK]: Point out mistakes and give corrected version. If none, say "Perfect Grammar!".
 [SMARTER VOCABULARY]: Suggest 2 advanced business words for their sentence.
 """
-model = genai.GenerativeModel(model_name="gemini-1.5-flash", system_instruction=SYSTEM_INSTRUCTION)
-
+gemini-1.5-flash-latest
 # 4. Streamlit Web UI Layout Design
 st.set_page_config(page_title="Aryan AI Coach", page_icon="🎯", layout="wide")
 

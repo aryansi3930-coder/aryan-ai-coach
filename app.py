@@ -26,7 +26,7 @@ def init_db():
 
 init_db()
 
-# 3. AI Model Setup (Foolproof Model Fallback)
+# 3. AI Model Setup (Using Updated 2026 Production Model)
 SYSTEM_INSTRUCTION = """
 You are 'Aryan AI', an elite corporate English communication coach. Talk professionally and guide the user like a mentor.
 At the end of your response, ALWAYS provide this exact structured section:
@@ -35,17 +35,11 @@ At the end of your response, ALWAYS provide this exact structured section:
 [SMARTER VOCABULARY]: Suggest 2 advanced business words for their sentence.
 """
 
-# Dynamic model handling to bypass any version issues
-try:
-    model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash", 
-        system_instruction=SYSTEM_INSTRUCTION
-    )
-except Exception:
-    model = genai.GenerativeModel(
-        model_name="models/gemini-1.5-flash", 
-        system_instruction=SYSTEM_INSTRUCTION
-    )
+# Swapped directly to gemini-2.5-flash to bypass legacy 404 block
+model = genai.GenerativeModel(
+    model_name="gemini-2.5-flash", 
+    system_instruction=SYSTEM_INSTRUCTION
+)
 
 # 4. Streamlit Web UI Layout Design
 st.set_page_config(page_title="Aryan AI Coach", page_icon="🎯", layout="wide")
@@ -88,7 +82,6 @@ if user_input := st.chat_input("Type your English sentence here..."):
     with st.chat_message("assistant"):
         with st.spinner("Aryan is analyzing your sentence structure..."):
             try:
-                # Direct generate content loop to avoid session crashes
                 response = model.generate_content(user_input)
                 ai_response_text = response.text
                 st.markdown(ai_response_text)

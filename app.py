@@ -1,9 +1,20 @@
 import streamlit as st
-import google.generativeai as genai
 import sqlite3
 import pandas as pd
-from gtts import gTTS
 import os
+import subprocess
+import sys
+
+# 🔥 AUTO-INSTALL ENGINE: Agar gTTS nahi mila, toh code khud download karega!
+try:
+    from gtts import gTTS
+except ModuleNotFoundError:
+    with st.spinner("Initializing Audio Components... Please wait a moment."):
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "gTTS"])
+        from gtts import gTTS
+        st.rerun()
+
+import google.generativeai as genai
 
 # 1. Secure API Key Loading
 try:
@@ -31,7 +42,6 @@ init_db()
 # 3. Web Layout Design & Cyber Theme
 st.set_page_config(page_title="Aryan Robot Coach", page_icon="🤖", layout="wide")
 
-# Custom CSS for UI and Animations
 st.markdown("""
 <style>
     .robot-stage {
@@ -140,16 +150,13 @@ st.markdown("""
 
 st.write("---")
 
-# 🎙️ Streamlit Native Audio Input - Yeh mobile aur laptop me hamesha kaam karega
+# 🎙️ Streamlit Native Audio Input
 audio_value = st.audio_input("Record your voice to talk to Aryan")
 
 if audio_value:
     with st.spinner("Aryan is processing your voice..."):
         try:
-            # Send audio directly to Gemini (Gemini 1.5/2.5 can read audio directly!)
             model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-            
-            # Read audio bytes
             audio_bytes = audio_value.read()
             
             prompt = [
@@ -167,7 +174,7 @@ if audio_value:
             tts = gTTS(text=ai_reply, lang='en', tld='com', slow=False)
             tts.save("reply.mp3")
             
-            # Play Audio Autoplay natively
+            # Play Audio
             st.audio("reply.mp3", format="audio/mp3", autoplay=True)
             
             # Database Save

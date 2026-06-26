@@ -1,16 +1,19 @@
-
 import streamlit as st
 import google.generativeai as genai
 import sqlite3
 import pandas as pd
 
-# 1. API Configuration
-GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
-genai.configure(api_key=GEMINI_API_KEY)
+# 1. API Configuration (Using Secure Secrets Engine)
+try:
+    GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
+    genai.configure(api_key=GEMINI_API_KEY)
+except Exception as e:
+    st.error("API Key missing in Streamlit Secrets setup. Please configure it in Settings.")
+    st.stop()
 
 # 2. Database Initialization
 def init_db():
-    conn = sqlite3.connect("supernova_web_analytics.db")
+    conn = sqlite3.connect("aryan_web_analytics.db")
     cursor = conn.cursor()
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS Web_Logs (
@@ -23,7 +26,7 @@ def init_db():
 
 init_db()
 
-# 3. AI Model Setup with Prompt Instructions (Updated to Aryan AI)
+# 3. AI Model Setup
 SYSTEM_INSTRUCTION = """
 You are 'Aryan AI', an elite corporate English communication coach. Talk professionally and guide the user like a mentor.
 At the end of your response, ALWAYS provide this exact structured section:
@@ -41,7 +44,7 @@ st.caption("Welcome! I am Aryan, your personal AI Coach. Let's sharpen your corp
 
 # Sidebar for Analytics Dashboard
 st.sidebar.title("📊 Aryan's Analytics Board")
-conn = sqlite3.connect("supernova_web_analytics.db")
+conn = sqlite3.connect("aryan_web_analytics.db")
 df = pd.read_sql_query("SELECT * FROM Web_Logs", conn)
 conn.close()
 
@@ -73,15 +76,19 @@ if user_input := st.chat_input("Type your English sentence here..."):
     
     with st.chat_message("assistant"):
         with st.spinner("Aryan is analyzing your sentence structure..."):
-            chat_stream = model.start_chat(history=[])
-            response = chat_stream.send_message(user_input)
-            ai_response_text = response.text
-            st.markdown(ai_response_text)
+            try:
+                chat_stream = model.start_chat(history=[])
+                response = chat_stream.send_message(user_input)
+                ai_response_text = response.text
+                st.markdown(ai_response_text)
+            except Exception as api_err:
+                st.error(f"AI Service Error: {api_err}. Please check if the API key in Streamlit secrets is valid.")
+                st.stop()
             
     st.session_state.chat_history.append({"role": "assistant", "text": ai_response_text})
     
     mistake_flag = 1 if "[GRAMMAR CHECK]" in ai_response_text and "Perfect Grammar!" not in ai_response_text else 0
-    conn = sqlite3.connect("supernova_web_analytics.db")
+    conn = sqlite3.connect("aryan_web_analytics.db")
     cursor = conn.cursor()
     cursor.execute("INSERT INTO Web_Logs (user_msg, ai_reply, mistake) VALUES (?, ?, ?)", (user_input, ai_response_text, mistake_flag))
     conn.commit()

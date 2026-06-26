@@ -94,10 +94,15 @@ st.markdown("""
     @keyframes floatHead {
         0% { transform: translateY(0px); }
         50% { transform: translateY(-8px); }
+        100% { transform: translateY(0px); }
     }
     @keyframes pulseCore {
         0% { transform: scale(0.9); opacity: 0.6; }
         100% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 30px #00f2fe; }
+    }
+    @keyframes blink {
+        0%, 90%, 100% { transform: scaleY(1); }
+        95% { transform: scaleY(0.1); }
     }
     .bot-status {
         color: #38bdf8;
@@ -111,7 +116,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("🤖 Aryan AI: Complete Voice Robot Coach")
-st.caption("No Requirements Needed! Niche diye gaye input me apna audio record karo, Robot khud bolkar reply dega.")
+st.caption("Niche diye gaye input me apna audio record karo, Robot khud bolkar reply dega.")
 
 # Visual Robot Model
 st.markdown("""
@@ -137,7 +142,8 @@ audio_value = st.audio_input("Record your voice to talk to Aryan")
 if audio_value:
     with st.spinner("Aryan is processing your voice..."):
         try:
-            model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+            # 🎯 UPDATED MODEL: Version mismatch/404 se bachne ke liye naya production model use kiya hai
+            model = genai.GenerativeModel(model_name="gemini-2.5-flash")
             audio_bytes = audio_value.read()
             
             prompt = [

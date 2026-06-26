@@ -2,18 +2,20 @@ import streamlit as st
 import google.generativeai as genai
 import sqlite3
 import pandas as pd
+from gtts import gTTS
+import os
 
 # 1. Secure API Key Loading
 try:
     GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=GEMINI_API_KEY)
 except Exception:
-    st.error("API Key missing in Streamlit Secrets setup. Please check Cloud Settings.")
+    st.error("API Key missing in Streamlit Secrets setup.")
     st.stop()
 
 # 2. Database Initialization
 def init_db():
-    conn = sqlite3.connect("aryan_robot_fixed.db")
+    conn = sqlite3.connect("aryan_robot_native.db")
     cursor = conn.cursor()
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS Voice_Logs (
@@ -26,9 +28,10 @@ def init_db():
 
 init_db()
 
-# 3. Web Layout Design & Futuristic Cyber Theme
+# 3. Web Layout Design & Cyber Theme
 st.set_page_config(page_title="Aryan Robot Coach", page_icon="🤖", layout="wide")
 
+# Custom CSS for UI and Animations
 st.markdown("""
 <style>
     .robot-stage {
@@ -36,21 +39,17 @@ st.markdown("""
         justify-content: center;
         align-items: center;
         background: radial-gradient(circle, #0f172a 0%, #020617 100%);
-        padding: 50px;
+        padding: 40px;
         border-radius: 20px;
         border: 2px solid #1e293b;
         box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
         max-width: 450px;
-        margin: 40px auto 10px auto;
+        margin: 20px auto 10px auto;
     }
     .robot-box {
         display: flex;
         flex-direction: column;
         align-items: center;
-        cursor: pointer;
-    }
-    .robot-box:active {
-        transform: scale(0.97);
     }
     .robot-head {
         width: 110px;
@@ -120,13 +119,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🤖 Aryan AI: Interactive Touch-to-Talk Robot Coach")
-st.caption("Robot ke body par direct touch/click karo aur English me baat karna shuru karo!")
+st.title("🤖 Aryan AI: Complete Voice Robot Coach")
+st.caption("Niche diye gaye Mic par click karke record karo, Robot turant sunkar reply bolega!")
 
-# HTML Render of the Clickable Robot Body Object
+# Visual Robot Model
 st.markdown("""
 <div class="robot-stage">
-    <div class="robot-box" onclick="startListening()">
+    <div class="robot-box">
         <div class="robot-head">
             <div class="robot-eye"></div>
             <div class="robot-eye"></div>
@@ -134,99 +133,50 @@ st.markdown("""
         <div class="robot-body-frame">
             <div class="robot-core"></div>
         </div>
-        <div id="status-text" class="bot-status">👇 TAP MY BODY TO TALK</div>
+        <div class="bot-status">🤖 ARYAN AI ONLINE</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# Session state layer setup
-if "voice_input" not in st.session_state:
-    st.session_state.voice_input = ""
+st.write("---")
 
-# 🎙️ HTML5 Web Speech Recognizer API Script Engine
-st.markdown("""
-<script>
-const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-recognition.lang = 'en-US';
-recognition.interimResults = false;
+# 🎙️ Streamlit Native Audio Input - Yeh mobile aur laptop me hamesha kaam karega
+audio_value = st.audio_input("Record your voice to talk to Aryan")
 
-function startListening() {
-    const status = document.getElementById("status-text");
-    if(status) {
-        status.innerHTML = "🔴 LISTENING... SPEAK NOW!";
-        status.style.color = "#ef4444";
-        status.style.textShadow = "0 0 10px #ef4444";
-    }
-    recognition.start();
-}
-
-recognition.onresult = function(event) {
-    const textResult = event.results[0][0].transcript;
-    parent.postMessage({type: 'streamlit:set_widget_value', id: 'voice_bridge', value: textResult}, '*');
-};
-
-recognition.onerror = function() {
-    const status = document.getElementById("status-text");
-    if(status) {
-        status.innerHTML = "❌ TRY AGAIN: TAP HERE";
-        status.style.color = "#f43f5e";
-    }
-};
-</script>
-""", unsafe_allow_html=True)
-
-# Proxy data token bridging panel
-spoken_text = st.text_input("", key="voice_bridge", label_visibility="collapsed")
-
-# 4. Engine Core Logic Implementation
-if spoken_text and spoken_text != st.session_state.voice_input:
-    st.session_state.voice_input = spoken_text
-    
-    with st.spinner(""):
+if audio_value:
+    with st.spinner("Aryan is processing your voice..."):
         try:
-            model = genai.GenerativeModel(model_name="gemini-2.5-flash")
-            prompt = f"You are Aryan AI, an English coach robot. Reply to this spoken text short and cleanly under 3 lines, then flag grammar mistakes inside brackets: {spoken_text}"
-            response = model.generate_content(prompt)
-            ai_reply = response.text
-        except Exception:
+            # Send audio directly to Gemini (Gemini 1.5/2.5 can read audio directly!)
             model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-            prompt = f"Reply shortly under 3 lines and add grammar corrections: {spoken_text}"
+            
+            # Read audio bytes
+            audio_bytes = audio_value.read()
+            
+            prompt = [
+                "You are Aryan AI, an English coach robot. Listen to this user audio, transcribe what they said, reply to it shortly under 3 lines, and then flag grammar mistakes inside brackets.",
+                {"mime_type": "audio/wav", "data": audio_bytes}
+            ]
+            
             response = model.generate_content(prompt)
             ai_reply = response.text
-
-    # Show Conversation Feed
-    st.write("---")
-    st.chat_message("user").markdown(f"**You:** {spoken_text}")
-    st.chat_message("assistant").markdown(f"**Aryan Robot:** {ai_reply}")
-
-    # 🔊 Safe Text-To-Speech String Injection (Using clean replacement logic instead of breaking f-strings)
-    clean_reply = ai_reply.replace('"', '\\"').replace('\n', ' ')
-    
-    html_audio_script = f"""
-    <script>
-    window.speechSynthesis.cancel();
-    var msg = new SpeechSynthesisUtterance("{clean_reply}");
-    msg.lang = 'en-US';
-    msg.pitch = 0.85;
-    msg.rate = 1.0;
-    window.speechSynthesis.speak(msg);
-    
-    const status = document.getElementById("status-text");
-    if(status) {{
-        status.innerHTML = "👇 TAP MY BODY TO TALK";
-        status.style.color = "#38bdf8";
-        status.style.textShadow = "0 0 8px rgba(56, 189, 248, 0.6)";
-    }}
-    </script>
-    """
-    st.markdown(html_audio_script, unsafe_allow_html=True)
-
-    # Logging Metrics
-    mistake_flag = 1 if "mistake" in ai_reply.lower() or "wrong" in ai_reply.lower() else 0
-    conn = sqlite3.connect("aryan_robot_fixed.db")
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO Voice_Logs (user_msg, ai_reply, mistake) VALUES (?, ?, ?)", (spoken_text, ai_reply, mistake_flag))
-    conn.commit()
-    conn.close()
-    
-    st.rerun()
+            
+            # Show Conversation
+            st.chat_message("assistant").markdown(f"**Aryan Robot:** {ai_reply}")
+            
+            # 🔊 Generate Voice Reply using gTTS
+            tts = gTTS(text=ai_reply, lang='en', tld='com', slow=False)
+            tts.save("reply.mp3")
+            
+            # Play Audio Autoplay natively
+            st.audio("reply.mp3", format="audio/mp3", autoplay=True)
+            
+            # Database Save
+            mistake_flag = 1 if "mistake" in ai_reply.lower() or "wrong" in ai_reply.lower() else 0
+            conn = sqlite3.connect("aryan_robot_native.db")
+            cursor = conn.cursor()
+            cursor.execute("INSERT INTO Voice_Logs (user_msg, ai_reply, mistake) VALUES (?, ?, ?)", ("Audio Message", ai_reply, mistake_flag))
+            conn.commit()
+            conn.close()
+            
+        except Exception as e:
+            st.error(f"Something went wrong: {e}")

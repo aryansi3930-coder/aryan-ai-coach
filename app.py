@@ -13,7 +13,8 @@ except Exception:
 # 2. Web Layout Design & Cyber Theme
 st.set_page_config(page_title="Aryan Robot Coach", page_icon="🤖", layout="wide")
 
-st.markdown("""
+# Custom UI Theme Styles Separated to prevent string termination crashes
+robot_css = """
 <style>
     .auth-box {
         max-width: 450px;
@@ -112,9 +113,10 @@ st.markdown("""
         font-weight: bold;
     }
 </style>
-""", unsafe_allow_html=True)
+"""
+st.markdown(robot_css, unsafe_allow_html=True)
 
-# ZERO-DATABASE MEMORY SYSTEM
+# ZERO-DATABASE RUNTIME SESSION STATE STORAGE
 if "user_db" not in st.session_state:
     st.session_state.user_db = {}  
 if "chat_history_logs" not in st.session_state:
@@ -128,17 +130,12 @@ if "auth_mode" not in st.session_state:
 if "voice_input" not in st.session_state:
     st.session_state.voice_input = ""
 
-# 🔑 AUTHENTICATION FLOW PORTAL
+# 🔑 AUTHENTICATION CONFIGURATION NODE
 if not st.session_state.logged_in:
     
     # --- 1. LOGIN MODE ---
     if st.session_state.auth_mode == "login":
-        st.markdown("""
-        <div class="auth-box">
-            <h2 style="color: #38bdf8; margin-bottom: 5px;">🤖 ARYAN AI SIGN IN</h2>
-            <p style="color: #94a3b8; font-size: 14px;">Username ya Email ID daal kar login karein</p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="auth-box"><h2 style="color: #38bdf8; margin-bottom: 5px;">🤖 ARYAN AI SIGN IN</h2><p style="color: #94a3b8; font-size: 14px;">Username ya Email ID daal kar login karein</p></div>', unsafe_allow_html=True)
         
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
@@ -162,7 +159,7 @@ if not st.session_state.logged_in:
                     if user_found:
                         st.session_state.logged_in = True
                         st.session_state.current_user = st.session_state.user_db[user_found]["fullname"]
-                        st.success(f"Access Granted!")
+                        st.success("Access Granted!")
                         st.rerun()
                     else:
                         st.error("Invalid Username, Email or Password!")
@@ -173,15 +170,3 @@ if not st.session_state.logged_in:
                 st.rerun()
 
     # --- 2. SIGN UP MODE ---
-    elif st.session_state.auth_mode == "signup":
-        st.markdown("""
-        <div class="auth-box">
-            <h2 style="color: #38bdf8; margin-bottom: 5px;">📝 CREATE NEW ACCOUNT</h2>
-            <p style="color: #94a3b8; font-size: 14px;">Password criteria: 8 to 12 characters only</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            reg_name = st.text_input("Full Name", key="sig_n", placeholder="Enter your full name...")
-            reg_email = st.text_input("

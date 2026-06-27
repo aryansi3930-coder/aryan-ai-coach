@@ -12,17 +12,17 @@ except Exception:
     st.error("API Key missing in Streamlit Secrets setup.")
     st.stop()
 
-# 2. Database Initialization (Fixed Table Setup)
+# 2. Database Initialization
 def init_db():
-    conn = sqlite3.connect("aryan_robot_auth_v3.db")
+    conn = sqlite3.connect("aryan_robot_auth_v4.db")
     cursor = conn.cursor()
-    # Table for User Profiles and Credentials
+    # Table for User Profiles (Username & Email are both unique)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS Users (
         username TEXT PRIMARY KEY, 
         password TEXT,
         fullname TEXT,
-        email TEXT
+        email TEXT UNIQUE
     )
     """)
     # Table for Robot Logs
@@ -150,31 +150,40 @@ if "current_user" not in st.session_state:
 if "auth_mode" not in st.session_state:
     st.session_state.auth_mode = "login"
 
-# 🔑 SINGLE CONTAINER SYSTEM (LOGIN & SIGNUP TOGGLE)
+# 🔑 SINGLE CONTAINER SYSTEM (LOGIN, SIGNUP & FORGOT TOGGLE)
 if not st.session_state.logged_in:
     
+    # --- 1. LOGIN MODE ---
     if st.session_state.auth_mode == "login":
         st.markdown("""
         <div class="auth-box">
             <h2 style="color: #38bdf8; margin-bottom: 5px;">🤖 ARYAN AI SIGN IN</h2>
-            <p style="color: #94a3b8; font-size: 14px;">Enter credentials to unlock your coach</p>
+            <p style="color: #94a3b8; font-size: 14px;">Username ya Email ID dono me se kuch bhi daal kar login karein</p>
         </div>
         """, unsafe_allow_html=True)
         
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            login_user = st.text_input("Username", key="lin_u", placeholder="Enter username...").strip()
+            login_input = st.text_input("Username or Email ID", key="lin_u", placeholder="Enter username or email...").strip()
             login_pass = st.text_input("Password", type="password", key="lin_p", placeholder="Enter password...")
             
+            # Forgot Password small trigger link lookalike
+            col_left, col_right = st.columns([1.2, 1])
+            with col_right:
+                if st.button("Forgot Account details? 🔍", key="forgot_trigger", use_container_width=True):
+                    st.session_state.auth_mode = "forgot"
+                    st.rerun()
+            
             if st.button("Unlock Session 🔓", use_container_width=True):
-                if login_user == "" or login_pass == "":
-                    st.warning("Please fill in both fields!")
+                if login_input == "" or login_pass == "":
+                    st.warning("Please fill in all fields!")
                 else:
                     hashed_login_pass = make_hashes(login_pass)
-                    conn = sqlite3.connect("aryan_robot_auth_v3.db")
+                    conn = sqlite3.connect("aryan_robot_auth_v4.db")
                     cursor = conn.cursor()
-                    # 🎯 FIXED LOGIC: Match user credentials against hashed strings natively
-                    cursor.execute("SELECT username FROM Users WHERE username = ? AND password = ?", (login_user, hashed_login_pass))
+                    # 🎯 DYNAMIC LOGIN: Username ya Email dono me se kisi ek se bhi match ho jaye
+                    cursor.execute("SELECT username FROM Users WHERE (username = ? OR email = ?) AND password = ?", 
+                                   (login_input, login_input, hashed_login_pass))
                     result = cursor.fetchone()
                     conn.close()
                     
@@ -184,7 +193,7 @@ if not st.session_state.logged_in:
                         st.success(f"Access Granted! Welcome back.")
                         st.rerun()
                     else:
-                        st.error("Invalid Username or Password! Double check your credentials.")
+                        st.error("Invalid Credentials! Please try again.")
             
             st.write("---")
             st.write("Don't have an account yet?")
@@ -192,29 +201,33 @@ if not st.session_state.logged_in:
                 st.session_state.auth_mode = "signup"
                 st.rerun()
 
+    # --- 2. SIGN UP MODE ---
     elif st.session_state.auth_mode == "signup":
         st.markdown("""
         <div class="auth-box">
             <h2 style="color: #38bdf8; margin-bottom: 5px;">📝 CREATE NEW ACCOUNT</h2>
-            <p style="color: #94a3b8; font-size: 14px;">Fill details to register on Robot Database</p>
+            <p style="color: #94a3b8; font-size: 14px;">Password criteria: 8 to 12 characters only</p>
         </div>
         """, unsafe_allow_html=True)
         
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             reg_name = st.text_input("Full Name", key="sig_n", placeholder="Enter your full name...")
-            reg_email = st.text_input("Email ID", key="sig_e", placeholder="Enter your email address...")
+            reg_email = st.text_input("Email ID (Must be unique)", key="sig_e", placeholder="Enter your email address...").strip()
             reg_user = st.text_input("Choose Username", key="sig_u", placeholder="Create unique username...").strip()
-            reg_pass = st.text_input("Choose Password", type="password", key="sig_p", placeholder="Create strong password...")
+            reg_pass = st.text_input("Choose Password (8-12 chars)", type="password", key="sig_p", placeholder="Create password...")
             
             if st.button("Register & Save Profile 🚀", use_container_width=True):
+                # 🎯 VALIDATION 1: Length criteria check (8 to 12)
                 if reg_name == "" or reg_email == "" or reg_user == "" or reg_pass == "":
                     st.warning("Saari fields bharna zaroori hai!")
+                elif len(reg_pass) < 8 or len(reg_pass) > 12:
+                    st.error(f"Password ki length galat hai! Aapka password {len(reg_pass)} digits ka hai. Yeh strictly 8 se 12 digits ke beech hona chahiye.")
                 elif "@" not in reg_email or "." not in reg_email:
                     st.error("Please enter a valid Email ID!")
                 else:
                     hashed_password = make_hashes(reg_pass)
-                    conn = sqlite3.connect("aryan_robot_auth_v3.db")
+                    conn = sqlite3.connect("aryan_robot_auth_v4.db")
                     cursor = conn.cursor()
                     try:
                         cursor.execute("INSERT INTO Users (username, password, fullname, email) VALUES (?,?,?,?)", 
@@ -223,13 +236,51 @@ if not st.session_state.logged_in:
                         st.success("Account successfully registered! Proceeding to Sign In...")
                         st.session_state.auth_mode = "login"
                         st.rerun()
-                    except sqlite3.IntegrityError:
-                        st.error("Username already exists! Try another one.")
+                    except sqlite3.IntegrityError as e:
+                        # 🎯 VALIDATION 2: Unique check for username and email
+                        if "email" in str(e).lower():
+                            st.error("Yeh Email ID pehle se registered hai! Doosri email use karein.")
+                        else:
+                            st.error("Username already exists! Try another one.")
                     finally:
                         conn.close()
             
             st.write("---")
             st.write("Already have an account?")
+            if st.button("Back to Login 🔒", use_container_width=True):
+                st.session_state.auth_mode = "login"
+                st.rerun()
+
+    # --- 3. FORGOT ACCOUNT DETAILS MODE ---
+    elif st.session_state.auth_mode == "forgot":
+        st.markdown("""
+        <div class="auth-box">
+            <h2 style="color: #f59e0b; margin-bottom: 5px;">🔍 RECOVER ACCOUNT</h2>
+            <p style="color: #94a3b8; font-size: 14px;">Apni registered Email ID daal kar details check karein</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            forgot_email = st.text_input("Enter Registered Email ID", key="for_e", placeholder="example@mail.com...").strip()
+            
+            if st.button("Recover Details 🛠️", use_container_width=True):
+                if forgot_email == "":
+                    st.warning("Please enter your email!")
+                else:
+                    conn = sqlite3.connect("aryan_robot_auth_v4.db")
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT username, fullname FROM Users WHERE email = ?", (forgot_email,))
+                    result = cursor.fetchone()
+                    conn.close()
+                    
+                    if result:
+                        st.success(f"Hello {result[1]}! Account found.")
+                        st.info(f"👉 **Your Username:** `{result[0]}`\n\n*(Note: Security ke liye password encrypted hai, agar naya password set karna hai toh database reset karna hoga ya aap purana 8-12 digit ka yaad karein!)*")
+                    else:
+                        st.error("Yeh Email ID database me nahi mili! Ek baar check karo.")
+            
+            st.write("---")
             if st.button("Back to Login 🔒", use_container_width=True):
                 st.session_state.auth_mode = "login"
                 st.rerun()
@@ -249,7 +300,7 @@ if st.sidebar.button("Log Out Securely 🚪", use_container_width=True):
 
 # Dynamic metric engine logs
 st.sidebar.markdown(f"### 📊 Track Profile")
-conn = sqlite3.connect("aryan_robot_auth_v3.db")
+conn = sqlite3.connect("aryan_robot_auth_v4.db")
 try:
     df = pd.read_sql_query("SELECT * FROM Voice_Logs WHERE username = ?", conn, params=(st.session_state.current_user,))
 except Exception:
@@ -320,7 +371,7 @@ if audio_value:
             
             # Database Save linked specifically to the current user
             mistake_flag = 1 if "mistake" in ai_reply.lower() or "wrong" in ai_reply.lower() else 0
-            conn = sqlite3.connect("aryan_robot_auth_v3.db")
+            conn = sqlite3.connect("aryan_robot_auth_v4.db")
             cursor = conn.cursor()
             cursor.execute("INSERT INTO Voice_Logs (username, user_msg, ai_reply, mistake) VALUES (?, ?, ?, ?)", 
                            (st.session_state.current_user, "Audio Message", ai_reply, mistake_flag))

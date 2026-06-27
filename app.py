@@ -114,9 +114,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 🛠️ ZERO-DATABASE MEMORY SYSTEM (Bypass Crash Loop)
+# ZERO-DATABASE MEMORY SYSTEM
 if "user_db" not in st.session_state:
-    st.session_state.user_db = {}  # Temporary clean memory dictionary
+    st.session_state.user_db = {}  
 if "chat_history_logs" not in st.session_state:
     st.session_state.chat_history_logs = []
 if "logged_in" not in st.session_state:
@@ -128,7 +128,7 @@ if "auth_mode" not in st.session_state:
 if "voice_input" not in st.session_state:
     st.session_state.voice_input = ""
 
-# 🔑 ULTRA-STABLE AUTH PORTAL
+# 🔑 AUTHENTICATION FLOW PORTAL
 if not st.session_state.logged_in:
     
     # --- 1. LOGIN MODE ---
@@ -153,7 +153,6 @@ if not st.session_state.logged_in:
                 if login_input == "" or login_pass == "":
                     st.warning("Please fill in all fields!")
                 else:
-                    # Check in memory database loop
                     user_found = None
                     for u, data in st.session_state.user_db.items():
                         if (u == login_input or data["email"] == login_input) and data["password"] == login_pass:
@@ -185,83 +184,4 @@ if not st.session_state.logged_in:
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             reg_name = st.text_input("Full Name", key="sig_n", placeholder="Enter your full name...")
-            reg_email = st.text_input("Email ID", key="sig_e", placeholder="Enter your email address...").strip().lower()
-            reg_user = st.text_input("Choose Username", key="sig_u", placeholder="Create unique username...").strip().lower()
-            reg_pass = st.text_input("Choose Password (8-12 chars)", type="password", key="sig_p", placeholder="Create password...")
-            
-            if st.button("Register & Save Profile 🚀", use_container_width=True):
-                # Unique Email verification check
-                email_exists = any(data["email"] == reg_email for data in st.session_state.user_db.values())
-                
-                if reg_name == "" or reg_email == "" or reg_user == "" or reg_pass == "":
-                    st.warning("Saari fields bharna zaroori hai!")
-                elif len(reg_pass) < 8 or len(reg_pass) > 12:
-                    st.error(f"Password Strictly 8 se 12 digits ka hona chahiye (Aapka password {len(reg_pass)} digits ka hai).")
-                elif "@" not in reg_email or "." not in reg_email:
-                    st.error("Please enter a valid Email ID!")
-                elif reg_user in st.session_state.user_db:
-                    st.error("Username already exists! Try another one.")
-                elif email_exists:
-                    st.error("Yeh Email ID pehle se registered hai!")
-                else:
-                    # Save natively in active instance cache dictionary node
-                    st.session_state.user_db[reg_user] = {
-                        "password": reg_pass,
-                        "fullname": reg_name,
-                        "email": reg_email
-                    }
-                    st.success("Account registered successfully!")
-                    st.session_state.auth_mode = "login"
-                    st.rerun()
-            
-            st.write("---")
-            if st.button("Back to Login 🔒", use_container_width=True):
-                st.session_state.auth_mode = "login"
-                st.rerun()
-
-    # --- 3. RECOVERY MODE ---
-    elif st.session_state.auth_mode == "forgot":
-        st.markdown("""
-        <div class="auth-box">
-            <h2 style="color: #f59e0b; margin-bottom: 5px;">🔍 RECOVER ACCOUNT</h2>
-            <p style="color: #94a3b8; font-size: 14px;">Registered Email daalkar username dhoondhein</p>
-        </div>
-        """, unsafe_allow_html=True)
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            forgot_email = st.text_input("Enter Registered Email ID", key="for_e").strip().lower()
-            
-            if st.button("Recover Details 🛠️", use_container_width=True):
-                user_found = None
-                for u, data in st.session_state.user_db.items():
-                    if data["email"] == forgot_email:
-                        user_found = u
-                        break
-                
-                if user_found:
-                    st.success(f"Account Located!")
-                    st.info(f"👉 **Your Username:** `{user_found}`")
-                else:
-                    st.error("Yeh Email ID memory me nahi mili!")
-                        
-            if st.button("Back to Login 🔒", use_container_width=True):
-                st.session_state.auth_mode = "login"
-                st.rerun()
-    st.stop()
-
-# 🔓 MAIN ROBOT DASHBOARD PANEL
-st.title("🤖 Aryan AI: Clickable Cyber-Robot Mentor")
-st.caption(f"Profile Session: 👤 {st.session_state.current_user}")
-
-# Sidebar config
-if st.sidebar.button("Log Out Securely 🚪", use_container_width=True):
-    st.session_state.logged_in = False
-    st.session_state.current_user = ""
-    st.session_state.auth_mode = "login"
-    st.rerun()
-
-# Sidebar analytics calculator using memory metrics list
-st.sidebar.markdown(f"### 📊 Profile Analytics")
-total_chats = len(st.session_state.chat_history_logs)
-if total_chats > 0:
-    total_errors = sum(1 for
+            reg_email = st.text_input("

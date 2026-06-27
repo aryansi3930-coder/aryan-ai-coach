@@ -12,9 +12,9 @@ except Exception:
     st.error("API Key missing in Streamlit Secrets setup.")
     st.stop()
 
-# 2. Database Initialization (Updated with Profile Fields)
+# 2. Database Initialization (Fixed Table Setup)
 def init_db():
-    conn = sqlite3.connect("aryan_robot_auth_v2.db")
+    conn = sqlite3.connect("aryan_robot_auth_v3.db")
     cursor = conn.cursor()
     # Table for User Profiles and Credentials
     cursor.execute("""
@@ -40,11 +40,6 @@ init_db()
 # Helper functions for Password Security
 def make_hashes(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
-
-def check_hashes(password, hashed_text):
-    if make_hashes(password) == hashed_text:
-        return True
-    return False
 
 # 3. Web Layout Design & Cyber Theme
 st.set_page_config(page_title="Aryan Robot Coach", page_icon="🤖", layout="wide")
@@ -153,7 +148,7 @@ if "logged_in" not in st.session_state:
 if "current_user" not in st.session_state:
     st.session_state.current_user = ""
 if "auth_mode" not in st.session_state:
-    st.session_state.auth_mode = "login"  # Default mode is login
+    st.session_state.auth_mode = "login"
 
 # 🔑 SINGLE CONTAINER SYSTEM (LOGIN & SIGNUP TOGGLE)
 if not st.session_state.logged_in:
@@ -168,26 +163,30 @@ if not st.session_state.logged_in:
         
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            login_user = st.text_input("Username", key="lin_u", placeholder="Enter username...")
+            login_user = st.text_input("Username", key="lin_u", placeholder="Enter username...").strip()
             login_pass = st.text_input("Password", type="password", key="lin_p", placeholder="Enter password...")
             
             if st.button("Unlock Session 🔓", use_container_width=True):
-                conn = sqlite3.connect("aryan_robot_auth_v2.db")
-                cursor = conn.cursor()
-                cursor.execute("SELECT password FROM Users WHERE username = ?", (login_user,))
-                result = cursor.fetchone()
-                conn.close()
-                
-                if result and check_hashes(login_pass, result[0]):
-                    st.session_state.logged_in = True
-                    st.session_state.current_user = login_user
-                    st.success(f"Access Granted! Welcome back.")
-                    st.rerun()
+                if login_user == "" or login_pass == "":
+                    st.warning("Please fill in both fields!")
                 else:
-                    st.error("Invalid Username or Password!")
+                    hashed_login_pass = make_hashes(login_pass)
+                    conn = sqlite3.connect("aryan_robot_auth_v3.db")
+                    cursor = conn.cursor()
+                    # 🎯 FIXED LOGIC: Match user credentials against hashed strings natively
+                    cursor.execute("SELECT username FROM Users WHERE username = ? AND password = ?", (login_user, hashed_login_pass))
+                    result = cursor.fetchone()
+                    conn.close()
+                    
+                    if result:
+                        st.session_state.logged_in = True
+                        st.session_state.current_user = result[0]
+                        st.success(f"Access Granted! Welcome back.")
+                        st.rerun()
+                    else:
+                        st.error("Invalid Username or Password! Double check your credentials.")
             
             st.write("---")
-            # Clear link under the login action to toggle mode
             st.write("Don't have an account yet?")
             if st.button("Create an Account (Sign Up) 📝", use_container_width=True):
                 st.session_state.auth_mode = "signup"
@@ -203,10 +202,9 @@ if not st.session_state.logged_in:
         
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            # New Advanced Fields Added 🚀
             reg_name = st.text_input("Full Name", key="sig_n", placeholder="Enter your full name...")
             reg_email = st.text_input("Email ID", key="sig_e", placeholder="Enter your email address...")
-            reg_user = st.text_input("Choose Username", key="sig_u", placeholder="Create unique username...")
+            reg_user = st.text_input("Choose Username", key="sig_u", placeholder="Create unique username...").strip()
             reg_pass = st.text_input("Choose Password", type="password", key="sig_p", placeholder="Create strong password...")
             
             if st.button("Register & Save Profile 🚀", use_container_width=True):
@@ -216,14 +214,13 @@ if not st.session_state.logged_in:
                     st.error("Please enter a valid Email ID!")
                 else:
                     hashed_password = make_hashes(reg_pass)
-                    conn = sqlite3.connect("aryan_robot_auth_v2.db")
+                    conn = sqlite3.connect("aryan_robot_auth_v3.db")
                     cursor = conn.cursor()
                     try:
                         cursor.execute("INSERT INTO Users (username, password, fullname, email) VALUES (?,?,?,?)", 
                                        (reg_user, hashed_password, reg_name, reg_email))
                         conn.commit()
-                        st.success("Account successfully registered!")
-                        # Directly change mode to login after successful creation
+                        st.success("Account successfully registered! Proceeding to Sign In...")
                         st.session_state.auth_mode = "login"
                         st.rerun()
                     except sqlite3.IntegrityError:
@@ -252,7 +249,7 @@ if st.sidebar.button("Log Out Securely 🚪", use_container_width=True):
 
 # Dynamic metric engine logs
 st.sidebar.markdown(f"### 📊 Track Profile")
-conn = sqlite3.connect("aryan_robot_auth_v2.db")
+conn = sqlite3.connect("aryan_robot_auth_v3.db")
 try:
     df = pd.read_sql_query("SELECT * FROM Voice_Logs WHERE username = ?", conn, params=(st.session_state.current_user,))
 except Exception:
@@ -323,7 +320,7 @@ if audio_value:
             
             # Database Save linked specifically to the current user
             mistake_flag = 1 if "mistake" in ai_reply.lower() or "wrong" in ai_reply.lower() else 0
-            conn = sqlite3.connect("aryan_robot_auth_v2.db")
+            conn = sqlite3.connect("aryan_robot_auth_v3.db")
             cursor = conn.cursor()
             cursor.execute("INSERT INTO Voice_Logs (username, user_msg, ai_reply, mistake) VALUES (?, ?, ?, ?)", 
                            (st.session_state.current_user, "Audio Message", ai_reply, mistake_flag))

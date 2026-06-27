@@ -28,9 +28,21 @@ init_db()
 # 3. Web Layout Design & Cyber Theme
 st.set_page_config(page_title="Aryan Robot Coach", page_icon="🤖", layout="wide")
 
-# Custom CSS for UI and Animations
+# Custom CSS for UI, Animations, and Login Screen
 st.markdown("""
 <style>
+    /* Styling for Login Box */
+    .login-container {
+        max-width: 400px;
+        margin: 100px auto;
+        padding: 30px;
+        background: #1e293b;
+        border-radius: 15px;
+        border: 2px solid #38bdf8;
+        box-shadow: 0 10px 30px rgba(56, 189, 248, 0.2);
+        text-align: center;
+        color: white;
+    }
     .robot-stage {
         display: flex;
         justify-content: center;
@@ -115,8 +127,43 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# 🔑 LOGIN SYSTEM LOGIC
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if not st.session_state.logged_in:
+    # Login Window UI
+    st.markdown("""
+    <div class="login-container">
+        <h2 style="color: #38bdf8; margin-bottom: 5px;">🤖 ARYAN AI GATEWAY</h2>
+        <p style="color: #94a3b8; font-size: 14px;">Please login to access your AI Coach</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Forms inside container using Streamlit columns for spacing
+    col_a, col_b, col_c = st.columns([1, 2, 1])
+    with col_b:
+        username = st.text_input("Username", placeholder="Enter username...")
+        password = st.text_input("Password", type="password", placeholder="Enter password...")
+        
+        # 🎯 Credential Check: Username = admin, Password = admin123 (Inhe badal sakte ho)
+        if st.button("Secure Login 🔒", use_container_width=True):
+            if username == "admin" and password == "admin123":
+                st.session_state.logged_in = True
+                st.success("Login Successful! Access Granted.")
+                st.rerun()
+            else:
+                st.error("Invalid Username or Password! Access Denied.")
+    st.stop() # Stops execution here so robot screen doesn't render without login
+
+# 🔓 MAIN APPLICATION CONTAINER (Will only open if logged_in is True)
 st.title("🤖 Aryan AI: Complete Voice Robot Coach")
-st.caption("Niche diye gaye input me apna audio record karo, Robot khud bolkar reply dega.")
+st.caption("Access Status: SECURE CLIENT SESSION 🟢")
+
+# Logout button inside sidebar
+if st.sidebar.button("Log Out 🚪"):
+    st.session_state.logged_in = False
+    st.rerun()
 
 # Visual Robot Model
 st.markdown("""
@@ -142,7 +189,6 @@ audio_value = st.audio_input("Record your voice to talk to Aryan")
 if audio_value:
     with st.spinner("Aryan is processing your voice..."):
         try:
-            # 🎯 UPDATED MODEL: Version mismatch/404 se bachne ke liye naya production model use kiya hai
             model = genai.GenerativeModel(model_name="gemini-2.5-flash")
             audio_bytes = audio_value.read()
             
@@ -158,7 +204,7 @@ if audio_value:
             st.chat_message("user").markdown("**You:** [Audio Sent]")
             st.chat_message("assistant").markdown(f"**Aryan Robot:** {ai_reply}")
             
-            # 🔊 Web-Safe Text-To-Speech (Zero Libraries Required)
+            # 🔊 Web-Safe Text-To-Speech
             clean_reply = ai_reply.replace('"', '\\"').replace('\n', ' ')
             html_audio_script = f"""
             <script>

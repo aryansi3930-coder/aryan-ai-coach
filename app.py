@@ -2,6 +2,7 @@ import streamlit as st
 import google.generativeai as genai
 import sqlite3
 import hashlib
+import pandas as pd
 
 # 1. Secure API Key Loading
 try:
@@ -158,7 +159,6 @@ if not st.session_state.logged_in:
     </div>
     """, unsafe_allow_html=True)
     
-    # Login vs Sign Up Menu Tabs
     auth_action = st.tabs(["🔒 Account Login", "📝 Create Account (Sign Up)"])
     
     # 1. LOGIN TAB SECTION
@@ -183,96 +183,4 @@ if not st.session_state.logged_in:
                 else:
                     st.error("Ghalat Username ya Password! Ek baar check karo.")
                     
-    # 2. SIGN UP TAB SECTION
-    with auth_action[1]:
-        col_s1, col_s2, col_s3 = st.columns([1, 3, 1])
-        with col_s2:
-            new_user = st.text_input("Choose Username", key="sign_u", placeholder="Create unique username...")
-            new_pass = st.text_input("Choose Password", type="password", key="sign_p", placeholder="Create strong password...")
-            confirm_pass = st.text_input("Confirm Password", type="password", key="sign_cp", placeholder="Re-type password...")
-            
-            if st.button("Register Account 🚀", use_container_width=True):
-                if new_user == "" or new_pass == "":
-                    st.warning("Username aur Password fields khali nahi ho sakti!")
-                elif new_pass != confirm_pass:
-                    st.error("Passwords match nahi ho rahe hain! Dubara type karo.")
-                else:
-                    hashed_password = make_hashes(new_pass)
-                    conn = sqlite3.connect("aryan_robot_auth.db")
-                    cursor = conn.cursor()
-                    try:
-                        cursor.execute("INSERT INTO Users (username, password) VALUES (?,?)", (new_user, hashed_password))
-                        conn.commit()
-                        st.success("Account successfully created! Ab upar 'Account Login' tab par jaakar login karo.")
-                    except sqlite3.IntegrityError:
-                        st.error("Yeh Username pehle se kisi ne le rakha hai! Kuch alag try karo.")
-                    finally:
-                        conn.close()
-    st.stop()
-
-# 🔓 MAIN SYSTEM DASHBOARD (Only visible post-login validation)
-st.title("🤖 Aryan AI: Complete Voice Robot Coach")
-st.caption(f"Secure Session Profile: Active User 👤 {st.session_state.current_user}")
-
-# Sidebar configurations
-if st.sidebar.button("Log Out Securely 🚪", use_container_width=True):
-    st.session_state.logged_in = False
-    st.session_state.current_user = ""
-    st.rerun()
-
-# Dashboard scorecard logic specific to the logged-in user
-st.sidebar.markdown(f"### 📊 {st.session_state.current_user}'s Progress")
-conn = sqlite3.connect("aryan_robot_auth.db")
-df = pd.read_sql_query("SELECT * FROM Voice_Logs WHERE username = ?", conn, params=(st.session_state.current_user,))
-conn.close()
-
-if not df.empty:
-    total_chats = len(df)
-    total_errors = df['mistake'].sum()
-    accuracy = round(((total_chats - total_errors) / total_chats) * 100, 1)
-    st.sidebar.metric(label="Sentences Practiced", value=total_chats)
-    st.sidebar.metric(label="Grammar Accuracy Score", value=f"{accuracy}%")
-else:
-    st.sidebar.info("Start speaking to record metrics profile!")
-
-# Visual Robot Model Frame
-st.markdown("""
-<div class="robot-stage">
-    <div class="robot-box">
-        <div class="robot-head">
-            <div class="robot-eye"></div>
-            <div class="robot-eye"></div>
-        </div>
-        <div class="robot-body-frame">
-            <div class="robot-core"></div>
-        </div>
-        <div class="bot-status">🤖 ARYAN AI ONLINE</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-st.write("---")
-
-# 🎙️ Streamlit Native Audio Input
-audio_value = st.audio_input("Record your voice to talk to Aryan")
-
-if audio_value:
-    with st.spinner("Aryan is processing your voice..."):
-        try:
-            model = genai.GenerativeModel(model_name="gemini-2.5-flash")
-            audio_bytes = audio_value.read()
-            
-            prompt = [
-                "You are Aryan AI, an English coach robot. Reply to this user audio shortly under 3 lines, then flag grammar mistakes inside brackets.",
-                {"mime_type": "audio/wav", "data": audio_bytes}
-            ]
-            
-            response = model.generate_content(prompt)
-            ai_reply = response.text
-            
-            # Show Conversation Feed
-            st.chat_message("user").markdown("**You:** [Audio Sent]")
-            st.chat_message("assistant").markdown(f"**Aryan Robot:** {ai_reply}")
-            
-            # 🔊 Web-Safe Text-To-Speech Engine
-            clean_reply = ai_reply.replace('"', '\\"').replace('\n', ' ')
+    # 2

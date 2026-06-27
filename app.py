@@ -14,11 +14,10 @@ except Exception:
 # 2. Web Layout Design & Cyber Theme
 st.set_page_config(page_title="Aryan Robot Coach", page_icon="🤖", layout="wide")
 
-# 🗄️ PERMANENT DATABASE ENGINE SETUP (Saves data forever in a file)
+# Database Engine Setup
 def init_db():
     conn = sqlite3.connect("aryan_robot_final_solid.db")
     cursor = conn.cursor()
-    # Profile table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS Users (
         username TEXT PRIMARY KEY, 
@@ -27,7 +26,6 @@ def init_db():
         email TEXT UNIQUE
     )
     """)
-    # Voice logs table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS Voice_Logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,21 +55,17 @@ robot_css = """
         justify-content: center;
         align-items: center;
         background: radial-gradient(circle, #0f172a 0%, #020617 100%);
-        padding: 40px;
+        padding: 35px;
         border-radius: 20px;
         border: 2px solid #1e293b;
         box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
         max-width: 450px;
-        margin: 20px auto 10px auto;
+        margin: 10px auto 10px auto;
     }
     .robot-box {
         display: flex;
         flex-direction: column;
         align-items: center;
-        cursor: pointer;
-    }
-    .robot-box:active {
-        transform: scale(0.97);
     }
     .robot-head {
         width: 110px;
@@ -136,6 +130,7 @@ robot_css = """
         margin-top: 20px;
         letter-spacing: 2px;
         font-weight: bold;
+        text-align: center;
     }
 </style>
 """
@@ -148,8 +143,6 @@ if "current_user" not in st.session_state:
     st.session_state.current_user = ""
 if "auth_mode" not in st.session_state:
     st.session_state.auth_mode = "login"
-if "voice_input" not in st.session_state:
-    st.session_state.voice_input = ""
 
 # 🔑 SECURE ISOLATED AUTH PORTAL
 if not st.session_state.logged_in:
@@ -171,7 +164,6 @@ if not st.session_state.logged_in:
             else:
                 conn = sqlite3.connect("aryan_robot_final_solid.db")
                 cursor = conn.cursor()
-                # Query matches username or email securely from database file
                 cursor.execute("SELECT username, fullname FROM Users WHERE (LOWER(username) = ? OR LOWER(email) = ?) AND password = ?", 
                                (login_input, login_input, login_pass))
                 result = cursor.fetchone()
@@ -229,7 +221,7 @@ if not st.session_state.logged_in:
             st.session_state.auth_mode = "login"
             st.rerun()
 
-    # --- 3. RECOVERY MODE (Saves tracking from permanent file) ---
+    # --- 3. RECOVERY MODE ---
     elif st.session_state.auth_mode == "forgot":
         st.markdown('<div class="auth-box"><h2 style="color: #f59e0b; margin-bottom: 5px;">RECOVER</h2></div>', unsafe_allow_html=True)
         forgot_email = st.text_input("Enter Email ID", key="for_e").strip().lower()
@@ -255,7 +247,7 @@ if not st.session_state.logged_in:
             st.rerun()
     st.stop()
 
-# 🔓 MAIN ROBOT DASHBOARD PANEL (VISIBLE POST-LOGIN)
+# 🔓 MAIN ROBOT DASHBOARD PANEL
 st.title("Aryan AI: Clickable Cyber-Robot Mentor")
 st.caption(f"Profile Session: {st.session_state.current_user}")
 
@@ -265,7 +257,7 @@ if st.sidebar.button("Log Out Securely", use_container_width=True):
     st.session_state.auth_mode = "login"
     st.rerun()
 
-# Dynamic metric builder reading straight from database file
+# Profile Analytics
 st.sidebar.markdown("### Profile Analytics")
 conn = sqlite3.connect("aryan_robot_final_solid.db")
 try:
@@ -281,11 +273,12 @@ if not df.empty:
     st.sidebar.metric(label="Sentences Practiced", value=total_chats)
     st.sidebar.metric(label="Grammar Accuracy", value=f"{accuracy}%")
 else:
-    st.sidebar.info("Tap robot and talk to start!")
+    st.sidebar.info("Use mic panel to start practice!")
 
+# Render Robot Design
 st.markdown("""
 <div class="robot-stage">
-    <div class="robot-box" onclick="startListening()">
+    <div class="robot-box">
         <div class="robot-head">
             <div class="robot-eye"></div>
             <div class="robot-eye"></div>
@@ -293,61 +286,35 @@ st.markdown("""
         <div class="robot-body-frame">
             <div class="robot-core"></div>
         </div>
-        <div id="status-text" class="bot-status">TAP MY BODY TO TALK</div>
+        <div class="bot-status">USE THE MIC PANEL BELOW TO TALK TO ME</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-js_pipeline = """
-<script>
-const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-recognition.lang = 'en-US';
-recognition.interimResults = false;
+st.write("")
 
-function startListening() {
-    const status = document.getElementById("status-text");
-    if(status) {
-        status.innerHTML = "LISTENING... SPEAK NOW!";
-        status.style.color = "#ef4444";
-        status.style.textShadow = "0 0 10px #ef4444";
-    }
-    recognition.start();
-}
+# 🎙️ BULLETPROOF SECURE STREAMLIT AUDIO AUDIO_INPUT PIPELINE
+# Isse browser cloud permissions block nahi karega aur voice record ho jayegi
+audio_file = st.audio_input("Tap microphone to record and talk:", label_visibility="visible")
 
-recognition.onresult = function(event) {
-    const textResult = event.results[0][0].transcript;
-    parent.postMessage({type: 'streamlit:set_widget_value', id: 'voice_bridge', value: textResult}, '*');
-};
-
-recognition.onerror = function() {
-    const status = document.getElementById("status-text");
-    if(status) {
-        status.innerHTML = "TRY AGAIN: TAP HERE";
-        status.style.color = "#f43f5e";
-    }
-};
-</script>
-"""
-st.markdown(js_pipeline, unsafe_allow_html=True)
-
-spoken_text = st.text_input("", key="voice_bridge", label_visibility="collapsed")
-
-if spoken_text and spoken_text != st.session_state.voice_input:
-    st.session_state.voice_input = spoken_text
-    
-    with st.spinner(""):
+if audio_file:
+    with st.spinner("Processing your voice input..."):
         try:
+            # Send file stream or binary chunks to Gemini multimodal audio model directly 
             model = genai.GenerativeModel(model_name="gemini-2.5-flash")
-            prompt = f"You are Aryan AI, an English coach robot. Reply shortly under 3 lines, then flag grammar mistakes inside brackets: {spoken_text}"
+            prompt = [
+                "You are Aryan AI, an English coach robot. Listen to this user audio carefully. First, transcribe exactly what the user said in text, then reply shortly under 3 lines, and flag grammar mistakes inside brackets.",
+                {"mime_type": "audio/wav", "data": audio_file.read()}
+            ]
             response = model.generate_content(prompt)
             ai_reply = response.text
-        except Exception:
-            ai_reply = "Connection unstable. Please tap my body and speak again."
+        except Exception as e:
+            ai_reply = "System pipeline connection busy. Please press mic and speak again."
 
     st.write("---")
-    st.chat_message("user").markdown(f"**You:** {spoken_text}")
     st.chat_message("assistant").markdown(f"**Aryan Robot:** {ai_reply}")
 
+    # Autoplay Voice Player Synth Engine
     clean_reply = ai_reply.replace('"', '\\"').replace('\n', ' ')
     html_audio_script = f"""
     <script>
@@ -357,24 +324,15 @@ if spoken_text and spoken_text != st.session_state.voice_input:
     msg.pitch = 0.85;
     msg.rate = 1.0;
     window.speechSynthesis.speak(msg);
-    
-    const status = document.getElementById("status-text");
-    if(status) {{
-        status.innerHTML = "TAP MY BODY TO TALK";
-        status.style.color = "#38bdf8";
-        status.style.textShadow = "0 0 8px rgba(56, 189, 248, 0.6)";
-    }}
     </script>
     """
     st.markdown(html_audio_script, unsafe_allow_html=True)
 
-    # Permanent save profile logs inside DB file node
+    # Permanent save inside Database file records node
     mistake_flag = 1 if "mistake" in ai_reply.lower() or "wrong" in ai_reply.lower() else 0
     conn = sqlite3.connect("aryan_robot_final_solid.db")
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO Voice_Logs (username, user_msg, ai_reply, mistake) VALUES (?, ?, ?, ?)", 
-                   (st.session_state.current_user, spoken_text, ai_reply, mistake_flag))
+    cursor.execute("INSERT INTO Voice_Logs (username, user_msg, ai_reply, mistake) VALUES (?, 'Voice Audio Input', ?, ?)", 
+                   (st.session_state.current_user, ai_reply, mistake_flag))
     conn.commit()
     conn.close()
-    
-    st.rerun()

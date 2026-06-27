@@ -202,4 +202,195 @@ if not st.session_state.logged_in:
         if st.button("Register Profile", use_container_width=True):
             if reg_name == "" or reg_email == "" or reg_user == "" or reg_pass == "":
                 st.warning("All fields required!")
-            elif len(reg_pass) < 8 or
+            # 🎯 MASTER FIX: Both condition constraints packed tight in a single bulletproof line
+            elif len(reg_pass) < 8 or len(reg_pass) > 12:
+                st.error("Password must be 8-12 characters!")
+            elif "@" not in reg_email or "." not in reg_email:
+                st.error("Invalid Email ID!")
+            else:
+                conn = sqlite3.connect("aryan_robot_master_v5.db")
+                cursor = conn.cursor()
+                try:
+                    cursor.execute("INSERT INTO Users (username, password, fullname, email) VALUES (?, ?, ?, ?)", 
+                                   (reg_user, reg_pass, reg_name, reg_email))
+                    conn.commit()
+                    st.success("Registered successfully!")
+                    st.session_state.auth_mode = "login"
+                    st.rerun()
+                except sqlite3.IntegrityError as e:
+                    if "email" in str(e).lower():
+                        st.error("Email already registered!")
+                    else:
+                        st.error("Username already exists!")
+                finally:
+                    conn.close()
+        
+        st.write("---")
+        if st.button("Back to Login", use_container_width=True):
+            st.session_state.auth_mode = "login"
+            st.rerun()
+
+    elif st.session_state.auth_mode == "forgot":
+        st.markdown('<div class="auth-box"><h2 style="color: #f59e0b; margin-bottom: 5px;">RECOVER</h2></div>', unsafe_allow_html=True)
+        forgot_email = st.text_input("Enter Email ID", key="for_e").strip().lower()
+        if st.button("Recover Details", use_container_width=True):
+            if forgot_email == "":
+                st.warning("Please enter your email!")
+            else:
+                conn = sqlite3.connect("aryan_robot_master_v5.db")
+                cursor = conn.cursor()
+                cursor.execute("SELECT username, password FROM Users WHERE LOWER(email) = ?", (forgot_email,))
+                result = cursor.fetchone()
+                conn.close()
+                if result:
+                    st.success("Account Located!")
+                    st.info(f"Username: {result[0]} | Password: {result[1]}")
+                else:
+                    st.error("Email not found in database records!")
+        if st.button("Back to Login", use_container_width=True):
+            st.session_state.auth_mode = "login"
+            st.rerun()
+    st.stop()
+
+# 🔓 MAIN ROBOT DASHBOARD PANEL
+st.title("Aryan AI: Clickable Cyber-Robot Mentor")
+st.caption(f"Profile Session: {st.session_state.current_user}")
+
+if st.sidebar.button("Log Out Securely", use_container_width=True):
+    st.session_state.logged_in = False
+    st.session_state.current_user = ""
+    st.session_state.auth_mode = "login"
+    st.rerun()
+
+# Profile Analytics Dashboard Sidebar
+st.sidebar.markdown("### Profile Analytics")
+conn = sqlite3.connect("aryan_robot_master_v5.db")
+try:
+    df = pd.read_sql_query("SELECT * FROM Voice_Logs WHERE username = ?", conn, params=(st.session_state.current_user,))
+except Exception:
+    df = pd.DataFrame()
+conn.close()
+
+if not df.empty:
+    total_chats = len(df)
+    total_errors = df['mistake'].sum()
+    accuracy = round(((total_chats - total_errors) / total_chats) * 100, 1)
+    st.sidebar.metric(label="Sentences Practiced", value=total_chats)
+    st.sidebar.metric(label="Grammar Accuracy", value=f"{accuracy}%")
+else:
+    st.sidebar.info("Use mic panel to start practice!")
+
+# Render Robot Design
+st.markdown("""
+<div class="robot-stage">
+    <div class="robot-box">
+        <div class="robot-head">
+            <div class="robot-eye"></div>
+            <div class="robot-eye"></div>
+        </div>
+        <div class="robot-body-frame">
+            <div class="robot-core"></div>
+        </div>
+        <div class="bot-status">TALK TO ME BELOW</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+st.write("")
+
+# 🎙️ AUDIO INPUT
+audio_file = st.audio_input("Tap microphone to record and talk:", label_visibility="visible")
+
+if audio_file:
+    with st.spinner("Analyzing audio content and grammar logic..."):
+        try:
+            model = genai.GenerativeModel(model_name="gemini-2.5-flash")
+            
+            prompt = [
+                """You are Aryan AI, a professional English voice coach. Listen to this user audio carefully.
+                You must process the audio and provide the output EXACTLY in this format. Do not use markdown bold inside fields, separate lines by pipes (|).
+                Format structure:
+                Transcribed: [Exact text what user said in audio]
+                Corrected: [If mistake, write the grammatically correct version. If 100% correct, write "Perfect"]
+                Reason: [If mistake, explain the grammar rule in clear simple Hinglish. If correct, write "None"]
+                Hindi: [Hindi translation of what user said in English using Hindi script]
+                Reply: [Your short smart mentor reply under 2 lines in English]
+                Mistake_Flag: [Write 1 if user made a grammar/pronunciation mistake, write 0 if user was 100% correct]
+                """,
+                {"mime_type": "audio/wav", "data": audio_file.read()}
+            ]
+            response = model.generate_content(prompt)
+            raw_response = response.text
+
+            lines = raw_response.split("\n")
+            transcribed = "Audio Processed"
+            corrected = "Perfect"
+            reason = "None"
+            hindi = ""
+            reply = "Great talking to you!"
+            mistake_val = 0
+
+            for line in lines:
+                if "Transcribed:" in line: transcribed = line.split("Transcribed:")[1].strip()
+                if "Corrected:" in line: corrected = line.split("Corrected:")[1].strip()
+                if "Reason:" in line: reason = line.split("Reason:")[1].strip()
+                if "Hindi:" in line: hindi = line.split("Hindi:")[1].strip()
+                if "Reply:" in line: reply = line.split("Reply:")[1].strip()
+                if "Mistake_Flag:" in line: 
+                    try:
+                        mistake_val = int(line.split("Mistake_Flag:")[1].strip())
+                    except:
+                        mistake_val = 1 if "1" in line else 0
+
+        except Exception as e:
+            transcribed = "Error Reading Audio"
+            corrected = "Connection Error"
+            reason = str(e)
+            hindi = "कनेक्शन अस्थिर है"
+            reply = "Please try recording again."
+            mistake_val = 0
+
+    # 🔓 UI DISPLAYER PANELS
+    st.write("---")
+    st.markdown("### 🎙️ Session Feedback Analysis")
+    
+    col_u, col_r = st.columns(2)
+    with col_u:
+        st.chat_message("user").markdown(f"**What You Said:** {transcribed}")
+        if hindi:
+            st.caption(f"🇮🇳 *Hindi Meaning:* {hindi}")
+            
+    with col_r:
+        st.chat_message("assistant").markdown(f"**Aryan Robot:** {reply}")
+        
+    if mistake_val == 1 or (corrected.lower() != "perfect" and corrected != ""):
+        card_html = '<div class="feedback-card"><h4 style="color: #f43f5e; margin:0 0 5px 0;">⚠️ Grammar Correction Required:</h4><p style="color: #e2e8f0; margin:0 0 5px 0;"><b>Sahi Answer:</b> {}</p><p style="color: #94a3b8; margin:0;"><b>Reason (Kyun?):</b> {}</p></div>'.format(corrected, reason)
+        st.markdown(card_html, unsafe_allow_html=True)
+    else:
+        st.success("Excellent! Your sentence structure was 100% correct. Keep it up!")
+
+    # 🔊 Autoplay Voice Player Synth Engine
+    clean_reply = reply.replace('"', '\\"').replace('\n', ' ')
+    html_audio_script = f"""
+    <script>
+    window.speechSynthesis.cancel();
+    var msg = new SpeechSynthesisUtterance("{clean_reply}");
+    msg.lang = 'en-US';
+    msg.pitch = 0.85;
+    msg.rate = 1.0;
+    window.speechSynthesis.speak(msg);
+    </script>
+    """
+    st.markdown(html_audio_script, unsafe_allow_html=True)
+
+    # 💾 PERMANENT DATABASE STORAGE LOGGING ENGINE
+    conn = sqlite3.connect("aryan_robot_master_v5.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO Voice_Logs (username, user_msg, correct_msg, reason, hindi_trans, ai_reply, mistake) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (st.session_state.current_user, transcribed, corrected, reason, hindi, reply, mistake_val))
+    conn.commit()
+    conn.close()
+    
+    st.rerun()

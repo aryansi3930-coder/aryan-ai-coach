@@ -13,7 +13,7 @@ except Exception:
 # 2. Web Layout Design & Cyber Theme
 st.set_page_config(page_title="Aryan Robot Coach", page_icon="🤖", layout="wide")
 
-# Custom UI Theme Styles Variable
+# Custom UI Theme Styles Separated to prevent string termination crashes
 robot_css = """
 <style>
     .auth-box {
@@ -130,55 +130,215 @@ if "auth_mode" not in st.session_state:
 if "voice_input" not in st.session_state:
     st.session_state.voice_input = ""
 
-# 🔑 SECURE ISOLATED AUTH PORTAL (No Javascript interferes here!)
+# 🔑 SECURE ISOLATED AUTH PORTAL
 if not st.session_state.logged_in:
     
     # --- 1. LOGIN MODE ---
     if st.session_state.auth_mode == "login":
-        st.markdown('<div class="auth-box"><h2 style="color: #38bdf8; margin-bottom: 5px;">🤖 ARYAN AI SIGN IN</h2><p style="color: #94a3b8; font-size: 14px;">Username ya Email ID daal kar login karein</p></div>', unsafe_allow_html=True)
+        st.markdown('<div class="auth-box"><h2 style="color: #38bdf8; margin-bottom: 5px;">🤖 ARYAN AI SIGN IN</h2></div>', unsafe_allow_html=True)
         
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            login_input = st.text_input("Username or Email ID", key="lin_u", placeholder="Enter username or email...").strip().lower()
-            login_pass = st.text_input("Password", type="password", key="lin_p", placeholder="Enter password...")
-            
-            # 🎯 FIXED TRIGGER: Clean rerun logic to change mode immediately
-            if st.button("Forgot Account details? 🔍", key="forgot_trigger", use_container_width=True):
-                st.session_state.auth_mode = "forgot"
-                st.rerun()
-            
-            if st.button("Unlock Session 🔓", use_container_width=True):
-                if login_input == "" or login_pass == "":
-                    st.warning("Please fill in all fields!")
+        login_input = st.text_input("Username or Email ID", key="lin_u", placeholder="Enter details...").strip().lower()
+        login_pass = st.text_input("Password", type="password", key="lin_p", placeholder="Enter password...")
+        
+        if st.button("Forgot Details? 🔍", key="forgot_trigger", use_container_width=True):
+            st.session_state.auth_mode = "forgot"
+            st.rerun()
+        
+        if st.button("Unlock Session 🔓", use_container_width=True):
+            if login_input == "" or login_pass == "":
+                st.warning("Please fill in all fields!")
+            else:
+                user_found = None
+                for u, data in st.session_state.user_db.items():
+                    if (u == login_input or data["email"] == login_input) and data["password"] == login_pass:
+                        user_found = u
+                        break
+                
+                if user_found:
+                    st.session_state.logged_in = True
+                    st.session_state.current_user = st.session_state.user_db[user_found]["fullname"]
+                    st.success("Access Granted!")
+                    st.rerun()
                 else:
-                    user_found = None
-                    for u, data in st.session_state.user_db.items():
-                        if (u == login_input or data["email"] == login_input) and data["password"] == login_pass:
-                            user_found = u
-                            break
-                    
-                    if user_found:
-                        st.session_state.logged_in = True
-                        st.session_state.current_user = st.session_state.user_db[user_found]["fullname"]
-                        st.success("Access Granted!")
-                        st.rerun()
-                    else:
-                        st.error("Invalid Username, Email or Password!")
-            
-            st.write("---")
-            if st.button("Create an Account (Sign Up) 📝", use_container_width=True):
-                st.session_state.auth_mode = "signup"
-                st.rerun()
-
-    # --- 2. SIGN UP MODE ---
-    elif st.session_state.auth_mode == "signup":
-        st.markdown('<div class="auth-box"><h2 style="color: #38bdf8; margin-bottom: 5px;">📝 CREATE NEW ACCOUNT</h2><p style="color: #94a3b8; font-size: 14px;">Password criteria: 8 to 12 characters only</p></div>', unsafe_allow_html=True)
+                    st.error("Invalid Credentials!")
         
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            reg_name = st.text_input("Full Name", key="sig_n", placeholder="Enter your full name...")
-            reg_email = st.text_input("Email ID", key="sig_e", placeholder="Enter your email address...").strip().lower()
-            reg_user = st.text_input("Choose Username", key="sig_u", placeholder="Create unique username...").strip().lower()
-            reg_pass = st.text_input("Choose Password (8-12 chars)", type="password", key="sig_p", placeholder="Create password...")
+        st.write("---")
+        if st.button("Create Account (Sign Up) 📝", use_container_width=True):
+            st.session_state.auth_mode = "signup"
+            st.rerun()
+
+    # --- 2. SIGN UP MODE (Strings short and streamlined here 🚀) ---
+    elif st.session_state.auth_mode == "signup":
+        st.markdown('<div class="auth-box"><h2 style="color: #38bdf8; margin-bottom: 5px;">📝 CREATE ACCOUNT</h2></div>', unsafe_allow_html=True)
+        
+        reg_name = st.text_input("Full Name", key="sig_n", placeholder="Your name...")
+        reg_email = st.text_input("Email ID", key="sig_e", placeholder="Your email...").strip().lower()
+        reg_user = st.text_input("Username", key="sig_u", placeholder="Unique username...").strip().lower()
+        reg_pass = st.text_input("Password (8-12 chars)", type="password", key="sig_p", placeholder="Create password...")
+        
+        # 🎯 FIXED: Button string is single-line, clean and safely closed
+        if st.button("Register Profile 🚀", use_container_width=True):
+            email_exists = any(data["email"] == reg_email for data in st.session_state.user_db.values())
             
-            if st.button("Register &
+            if reg_name == "" or reg_email == "" or reg_user == "" or reg_pass == "":
+                st.warning("All fields required!")
+            elif len(reg_pass) < 8 or len(reg_pass) > 12:
+                st.error("Password must be 8-12 characters!")
+            elif "@" not in reg_email or "." not in reg_email:
+                st.error("Invalid Email ID!")
+            elif reg_user in st.session_state.user_db:
+                st.error("Username exists!")
+            elif email_exists:
+                st.error("Email registered!")
+            else:
+                st.session_state.user_db[reg_user] = {
+                    "password": reg_pass,
+                    "fullname": reg_name,
+                    "email": reg_email
+                }
+                st.success("Registered successfully!")
+                st.session_state.auth_mode = "login"
+                st.rerun()
+        
+        st.write("---")
+        if st.button("Back to Login 🔒", use_container_width=True):
+            st.session_state.auth_mode = "login"
+            st.rerun()
+
+    # --- 3. RECOVERY MODE ---
+    elif st.session_state.auth_mode == "forgot":
+        st.markdown('<div class="auth-box"><h2 style="color: #f59e0b; margin-bottom: 5px;">🔍 RECOVER</h2></div>', unsafe_allow_html=True)
+        forgot_email = st.text_input("Enter Email ID", key="for_e").strip().lower()
+        
+        if st.button("Recover Details 🛠️", use_container_width=True):
+            user_found = None
+            for u, data in st.session_state.user_db.items():
+                if data["email"] == forgot_email:
+                    user_found = u
+                    break
+            
+            if user_found:
+                st.success("Account Located!")
+                st.info(f"👉 **Username:** `{user_found}`")
+            else:
+                st.error("Email not found!")
+                    
+        if st.button("Back to Login 🔒", use_container_width=True):
+            st.session_state.auth_mode = "login"
+            st.rerun()
+    st.stop()
+
+# 🔓 MAIN ROBOT DASHBOARD PANEL (VISIBLE POST-LOGIN ONLY)
+st.title("🤖 Aryan AI: Clickable Cyber-Robot Mentor")
+st.caption(f"Profile Session: 👤 {st.session_state.current_user}")
+
+# Sidebar config
+if st.sidebar.button("Log Out Securely 🚪", use_container_width=True):
+    st.session_state.logged_in = False
+    st.session_state.current_user = ""
+    st.session_state.auth_mode = "login"
+    st.rerun()
+
+# Profile Analytics Calculations
+st.sidebar.markdown("### 📊 Profile Analytics")
+total_chats = len(st.session_state.chat_history_logs)
+if total_chats > 0:
+    total_errors = sum(1 for log in st.session_state.chat_history_logs if log["mistake"] == 1)
+    accuracy = round(((total_chats - total_errors) / total_chats) * 100, 1)
+    st.sidebar.metric(label="Sentences Practiced", value=total_chats)
+    st.sidebar.metric(label="Grammar Accuracy", value=f"{accuracy}%")
+else:
+    st.sidebar.info("Tap robot and talk to start!")
+
+# Clickable Robot Body Element Render
+st.markdown("""
+<div class="robot-stage">
+    <div class="robot-box" onclick="startListening()">
+        <div class="robot-head">
+            <div class="robot-eye"></div>
+            <div class="robot-eye"></div>
+        </div>
+        <div class="robot-body-frame">
+            <div class="robot-core"></div>
+        </div>
+        <div id="status-text" class="bot-status">👇 TAP MY BODY TO TALK</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# 🎙️ SOUND INTERFACE PIPELINE
+js_pipeline = """
+<script>
+const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+recognition.lang = 'en-US';
+recognition.interimResults = false;
+
+function startListening() {
+    const status = document.getElementById("status-text");
+    if(status) {
+        status.innerHTML = "🔴 LISTENING... SPEAK NOW!";
+        status.style.color = "#ef4444";
+        status.style.textShadow = "0 0 10px #ef4444";
+    }
+    recognition.start();
+}
+
+recognition.onresult = function(event) {
+    const textResult = event.results[0][0].transcript;
+    parent.postMessage({type: 'streamlit:set_widget_value', id: 'voice_bridge', value: textResult}, '*');
+};
+
+recognition.onerror = function() {
+    const status = document.getElementById("status-text");
+    if(status) {
+        status.innerHTML = "❌ TRY AGAIN: TAP HERE";
+        status.style.color = "#f43f5e";
+    }
+};
+</script>
+"""
+st.markdown(js_pipeline, unsafe_allow_html=True)
+
+spoken_text = st.text_input("", key="voice_bridge", label_visibility="collapsed")
+
+if spoken_text and spoken_text != st.session_state.voice_input:
+    st.session_state.voice_input = spoken_text
+    
+    with st.spinner(""):
+        try:
+            model = genai.GenerativeModel(model_name="gemini-2.5-flash")
+            prompt = f"You are Aryan AI, an English coach robot. Reply shortly under 3 lines, then flag grammar mistakes inside brackets: {spoken_text}"
+            response = model.generate_content(prompt)
+            ai_reply = response.text
+        except Exception:
+            ai_reply = "Connection unstable. Please tap my body and speak again."
+
+    st.write("---")
+    st.chat_message("user").markdown(f"**You:** {spoken_text}")
+    st.chat_message("assistant").markdown(f"**Aryan Robot:** {ai_reply}")
+
+    # Autoplay Voice player
+    clean_reply = ai_reply.replace('"', '\\"').replace('\n', ' ')
+    html_audio_script = f"""
+    <script>
+    window.speechSynthesis.cancel();
+    var msg = new SpeechSynthesisUtterance("{clean_reply}");
+    msg.lang = 'en-US';
+    msg.pitch = 0.85;
+    msg.rate = 1.0;
+    window.speechSynthesis.speak(msg);
+    
+    const status = document.getElementById("status-text");
+    if(status) {{
+        status.innerHTML = "👇 TAP MY BODY TO TALK";
+        status.style.color = "#38bdf8";
+        status.style.textShadow = "0 0 8px rgba(56, 189, 248, 0.6)";
+    }}
+    </script>
+    """
+    st.markdown(html_audio_script, unsafe_allow_html=True)
+
+    mistake_flag = 1 if "mistake" in ai_reply.lower() or "wrong" in ai_reply.lower() else 0
+    st.session_state.chat_history_logs.append({"user_msg": spoken_text, "ai_reply": ai_reply, "mistake": mistake_flag})
+    
+    st.rerun()

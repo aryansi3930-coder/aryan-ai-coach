@@ -1,5 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
+import sqlite3
 import pandas as pd
 
 # 1. Secure API Key Loading
@@ -12,6 +13,31 @@ except Exception:
 
 # 2. Web Layout Design & Cyber Theme
 st.set_page_config(page_title="Aryan Robot Coach", page_icon="🤖", layout="wide")
+
+# 🗄️ PERMANENT DATABASE ENGINE SETUP (Saves data forever in a file)
+def init_db():
+    conn = sqlite3.connect("aryan_robot_final_solid.db")
+    cursor = conn.cursor()
+    # Profile table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS Users (
+        username TEXT PRIMARY KEY, 
+        password TEXT,
+        fullname TEXT,
+        email TEXT UNIQUE
+    )
+    """)
+    # Voice logs table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS Voice_Logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT, user_msg TEXT, ai_reply TEXT, mistake INTEGER
+    )
+    """)
+    conn.commit()
+    conn.close()
+
+init_db()
 
 robot_css = """
 <style>
@@ -115,17 +141,7 @@ robot_css = """
 """
 st.markdown(robot_css, unsafe_allow_html=True)
 
-# 🛠️ HARDCODED PERMANENT TESTER ACCOUNT DETECTOR
-if "user_db" not in st.session_state:
-    st.session_state.user_db = {
-        "aryan123": {
-            "password": "password123",
-            "fullname": "Aryan Singh",
-            "email": "aryan@test.com"
-        }
-    }
-if "chat_history_logs" not in st.session_state:
-    st.session_state.chat_history_logs = []
+# Runtime control session states
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "current_user" not in st.session_state:
@@ -153,15 +169,17 @@ if not st.session_state.logged_in:
             if login_input == "" or login_pass == "":
                 st.warning("Please fill in all fields!")
             else:
-                user_found = None
-                for u, data in st.session_state.user_db.items():
-                    if (u == login_input or data["email"] == login_input) and data["password"] == login_pass:
-                        user_found = u
-                        break
+                conn = sqlite3.connect("aryan_robot_final_solid.db")
+                cursor = conn.cursor()
+                # Query matches username or email securely from database file
+                cursor.execute("SELECT username, fullname FROM Users WHERE (LOWER(username) = ? OR LOWER(email) = ?) AND password = ?", 
+                               (login_input, login_input, login_pass))
+                result = cursor.fetchone()
+                conn.close()
                 
-                if user_found:
+                if result:
                     st.session_state.logged_in = True
-                    st.session_state.current_user = st.session_state.user_db[user_found]["fullname"]
+                    st.session_state.current_user = result[0]
                     st.success("Access Granted!")
                     st.rerun()
                 else:
@@ -182,57 +200,62 @@ if not st.session_state.logged_in:
         reg_pass = st.text_input("Password (8-12 chars)", type="password", key="sig_p", placeholder="Create password")
         
         if st.button("Register Profile", use_container_width=True):
-            email_exists = any(data["email"] == reg_email for data in st.session_state.user_db.values())
-            
             if reg_name == "" or reg_email == "" or reg_user == "" or reg_pass == "":
                 st.warning("All fields required!")
             elif len(reg_pass) < 8 or len(reg_pass) > 12:
                 st.error("Password must be 8-12 characters!")
             elif "@" not in reg_email or "." not in reg_email:
                 st.error("Invalid Email ID!")
-            elif reg_user in st.session_state.user_db:
-                st.error("Username exists!")
-            elif email_exists:
-                st.error("Email registered!")
             else:
-                st.session_state.user_db[reg_user] = {
-                    "password": reg_pass,
-                    "fullname": reg_name,
-                    "email": reg_email
-                }
-                st.success("Registered successfully!")
-                st.session_state.auth_mode = "login"
-                st.rerun()
+                conn = sqlite3.connect("aryan_robot_final_solid.db")
+                cursor = conn.cursor()
+                try:
+                    cursor.execute("INSERT INTO Users (username, password, fullname, email) VALUES (?, ?, ?, ?)", 
+                                   (reg_user, reg_pass, reg_name, reg_email))
+                    conn.commit()
+                    st.success("Registered successfully!")
+                    st.session_state.auth_mode = "login"
+                    st.rerun()
+                except sqlite3.IntegrityError as e:
+                    if "email" in str(e).lower():
+                        st.error("Email already registered!")
+                    else:
+                        st.error("Username already exists!")
+                finally:
+                    conn.close()
         
         st.write("---")
         if st.button("Back to Login", use_container_width=True):
             st.session_state.auth_mode = "login"
             st.rerun()
 
-    # --- 3. RECOVERY MODE ---
+    # --- 3. RECOVERY MODE (Saves tracking from permanent file) ---
     elif st.session_state.auth_mode == "forgot":
         st.markdown('<div class="auth-box"><h2 style="color: #f59e0b; margin-bottom: 5px;">RECOVER</h2></div>', unsafe_allow_html=True)
         forgot_email = st.text_input("Enter Email ID", key="for_e").strip().lower()
         
         if st.button("Recover Details", use_container_width=True):
-            user_found = None
-            for u, data in st.session_state.user_db.items():
-                if data["email"] == forgot_email:
-                    user_found = u
-                    break
-            
-            if user_found:
-                st.success("Account Located!")
-                st.info(f"Username: {user_found} | Password: {st.session_state.user_db[user_found]['password']}")
+            if forgot_email == "":
+                st.warning("Please enter your email!")
             else:
-                st.error("Email not found in system cache!")
+                conn = sqlite3.connect("aryan_robot_final_solid.db")
+                cursor = conn.cursor()
+                cursor.execute("SELECT username, password FROM Users WHERE LOWER(email) = ?", (forgot_email,))
+                result = cursor.fetchone()
+                conn.close()
+                
+                if result:
+                    st.success("Account Located!")
+                    st.info(f"Username: {result[0]} | Password: {result[1]}")
+                else:
+                    st.error("Email not found in database records!")
                     
         if st.button("Back to Login", use_container_width=True):
             st.session_state.auth_mode = "login"
             st.rerun()
     st.stop()
 
-# 🔓 MAIN ROBOT DASHBOARD PANEL
+# 🔓 MAIN ROBOT DASHBOARD PANEL (VISIBLE POST-LOGIN)
 st.title("Aryan AI: Clickable Cyber-Robot Mentor")
 st.caption(f"Profile Session: {st.session_state.current_user}")
 
@@ -242,10 +265,18 @@ if st.sidebar.button("Log Out Securely", use_container_width=True):
     st.session_state.auth_mode = "login"
     st.rerun()
 
+# Dynamic metric builder reading straight from database file
 st.sidebar.markdown("### Profile Analytics")
-total_chats = len(st.session_state.chat_history_logs)
-if total_chats > 0:
-    total_errors = sum(1 for log in st.session_state.chat_history_logs if log["mistake"] == 1)
+conn = sqlite3.connect("aryan_robot_final_solid.db")
+try:
+    df = pd.read_sql_query("SELECT * FROM Voice_Logs WHERE username = ?", conn, params=(st.session_state.current_user,))
+except Exception:
+    df = pd.DataFrame()
+conn.close()
+
+if not df.empty:
+    total_chats = len(df)
+    total_errors = df['mistake'].sum()
     accuracy = round(((total_chats - total_errors) / total_chats) * 100, 1)
     st.sidebar.metric(label="Sentences Practiced", value=total_chats)
     st.sidebar.metric(label="Grammar Accuracy", value=f"{accuracy}%")
@@ -337,7 +368,13 @@ if spoken_text and spoken_text != st.session_state.voice_input:
     """
     st.markdown(html_audio_script, unsafe_allow_html=True)
 
+    # Permanent save profile logs inside DB file node
     mistake_flag = 1 if "mistake" in ai_reply.lower() or "wrong" in ai_reply.lower() else 0
-    st.session_state.chat_history_logs.append({"user_msg": spoken_text, "ai_reply": ai_reply, "mistake": mistake_flag})
+    conn = sqlite3.connect("aryan_robot_final_solid.db")
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO Voice_Logs (username, user_msg, ai_reply, mistake) VALUES (?, ?, ?, ?)", 
+                   (st.session_state.current_user, spoken_text, ai_reply, mistake_flag))
+    conn.commit()
+    conn.close()
     
     st.rerun()

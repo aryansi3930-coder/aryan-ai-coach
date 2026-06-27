@@ -14,11 +14,10 @@ except Exception:
 # 2. Web Layout Design & Cyber Theme
 st.set_page_config(page_title="Aryan Robot Coach", page_icon="🤖", layout="wide")
 
-# 🗄️ PERMANENT DATABASE ENGINE CONNECTION
+# Database Connection Setup
 def init_db():
     conn = sqlite3.connect("aryan_robot_master_v5.db")
     cursor = conn.cursor()
-    # Users Table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS Users (
         username TEXT PRIMARY KEY, 
@@ -27,7 +26,6 @@ def init_db():
         email TEXT UNIQUE
     )
     """)
-    # Voice Logs Table with Complete Feedback Schema
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS Voice_Logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,8 +38,6 @@ def init_db():
         mistake INTEGER
     )
     """)
-    
-    # MASTER FIX: Hardcoded Master Profile so it NEVER gets deleted on server reset
     try:
         cursor.execute("""
             INSERT OR IGNORE INTO Users (username, password, fullname, email) 
@@ -50,7 +46,6 @@ def init_db():
         conn.commit()
     except Exception:
         pass
-        
     conn.close()
 
 init_db()
@@ -172,8 +167,6 @@ if "auth_mode" not in st.session_state:
 
 # 🔑 SECURE AUTHENTICATION CONTAINER
 if not st.session_state.logged_in:
-    
-    # --- 1. LOGIN MODE ---
     if st.session_state.auth_mode == "login":
         st.markdown('<div class="auth-box"><h2 style="color: #38bdf8; margin-bottom: 5px;">ARYAN AI SIGN IN</h2></div>', unsafe_allow_html=True)
         login_input = st.text_input("Username or Email ID", key="lin_u", placeholder="Enter username or email...").strip().lower()
@@ -206,7 +199,6 @@ if not st.session_state.logged_in:
             st.session_state.auth_mode = "signup"
             st.rerun()
 
-    # --- 2. SIGN UP MODE ---
     elif st.session_state.auth_mode == "signup":
         st.markdown('<div class="auth-box"><h2 style="color: #38bdf8; margin-bottom: 5px;">CREATE ACCOUNT</h2></div>', unsafe_allow_html=True)
         reg_name = st.text_input("Full Name", key="sig_n", placeholder="Your name")
@@ -244,11 +236,9 @@ if not st.session_state.logged_in:
             st.session_state.auth_mode = "login"
             st.rerun()
 
-    # --- 3. RECOVERY MODE ---
     elif st.session_state.auth_mode == "forgot":
         st.markdown('<div class="auth-box"><h2 style="color: #f59e0b; margin-bottom: 5px;">RECOVER</h2></div>', unsafe_allow_html=True)
         forgot_email = st.text_input("Enter Email ID", key="for_e", placeholder="Enter registered email...").strip().lower()
-        
         if st.button("Recover Details", use_container_width=True):
             if forgot_email == "":
                 st.warning("Please enter your email!")
@@ -263,13 +253,12 @@ if not st.session_state.logged_in:
                     st.info("Username: {} | Password: {}".format(result[0], result[1]))
                 else:
                     st.error("Email not found in database records!")
-                    
         if st.button("Back to Login", use_container_width=True):
             st.session_state.auth_mode = "login"
             st.rerun()
     st.stop()
 
-# 🔓 MAIN ROBOT DASHBOARD PANEL (VISIBLE AFTER LOGIN)
+# 🔓 MAIN ROBOT DASHBOARD PANEL
 st.title("Aryan AI: Clickable Cyber-Robot Mentor")
 st.caption(f"Profile Session: {st.session_state.current_user}")
 
@@ -319,6 +308,15 @@ st.write("")
 audio_file = st.audio_input("Tap microphone to record and talk:", label_visibility="visible")
 
 if audio_file:
+    # Set default structures in case API drops or limit hits
+    transcribed = "Audio Processed"
+    corrected = "Perfect"
+    reason = "None"
+    hindi = ""
+    reply = "Great talking to you!"
+    mistake_val = 0
+    save_to_db = True
+
     with st.spinner("Analyzing audio content and grammar logic..."):
         try:
             model = genai.GenerativeModel(model_name="gemini-2.5-flash")
@@ -340,13 +338,6 @@ if audio_file:
             raw_response = response.text
 
             lines = raw_response.split("\n")
-            transcribed = "Audio Processed"
-            corrected = "Perfect"
-            reason = "None"
-            hindi = ""
-            reply = "Great talking to you!"
-            mistake_val = 0
-
             for line in lines:
                 if "Transcribed:" in line: transcribed = line.split("Transcribed:")[1].strip()
                 if "Corrected:" in line: corrected = line.split("Corrected:")[1].strip()
@@ -359,13 +350,19 @@ if audio_file:
                     except:
                         mistake_val = 1 if "1" in line else 0
 
+        # 🎯 MASTER FIX: Catch Google Quota Limits safely
         except Exception as e:
-            transcribed = "Error Reading Audio"
-            corrected = "Connection Error"
-            reason = str(e)
-            hindi = "कनेक्शन अस्थिर है"
-            reply = "Please try recording again."
-            mistake_val = 0
+            save_to_db = False  # Limit leak block fallback
+            transcribed = "Mic transmission busy"
+            corrected = "Connection Tier Reset"
+            hindi = "गूगल सर्वर अभी व्यस्त है"
+            
+            if "429" in str(e) or "quota" in str(e).lower():
+                reply = "Google AI free limit reached. Please wait 30-50 seconds and tap mic again!"
+                reason = "Google API has a strict 15 requests per minute limit on free keys."
+            else:
+                reply = "Connection unstable. Let's try again."
+                reason = str(e)
 
     # 🔓 UI FEEDBACK INTERFACE DISPLAYERS
     st.write("---")
@@ -380,8 +377,10 @@ if audio_file:
     with col_r:
         st.chat_message("assistant").markdown(f"**Aryan Robot:** {reply}")
         
-    # Grammar Correction Card Builder
-    if mistake_val == 1 or (corrected.lower() != "perfect" and corrected != ""):
+    # Display Card engine
+    if not save_to_db:
+        st.error(reply)
+    elif mistake_val == 1 or (corrected.lower() != "perfect" and corrected != ""):
         card_html = '<div class="feedback-card"><h4 style="color: #f43f5e; margin:0 0 5px 0;">⚠️ Grammar Correction Required:</h4><p style="color: #e2e8f0; margin:0 0 5px 0;"><b>Sahi Answer:</b> {}</p><p style="color: #94a3b8; margin:0;"><b>Reason (Kyun?):</b> {}</p></div>'.format(corrected, reason)
         st.markdown(card_html, unsafe_allow_html=True)
     else:
@@ -401,14 +400,14 @@ if audio_file:
     """
     st.markdown(html_audio_script, unsafe_allow_html=True)
 
-    # 💾 SAVE DATA TO PERMANENT SQLite DB STORAGE
-    conn = sqlite3.connect("aryan_robot_master_v5.db")
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO Voice_Logs (username, user_msg, correct_msg, reason, hindi_trans, ai_reply, mistake) 
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (st.session_state.current_user, transcribed, corrected, reason, hindi, reply, mistake_val))
-    conn.commit()
-    conn.close()
-    
-    st.rerun()
+    # 💾 SAVE DATA TO PERMANENT SQLite DB STORAGE (Only if API request was healthy)
+    if save_to_db:
+        conn = sqlite3.connect("aryan_robot_master_v5.db")
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO Voice_Logs (username, user_msg, correct_msg, reason, hindi_trans, ai_reply, mistake) 
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (st.session_state.current_user, transcribed, corrected, reason, hindi, reply, mistake_val))
+        conn.commit()
+        conn.close()
+        st.rerun()

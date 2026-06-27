@@ -13,7 +13,7 @@ except Exception:
 # 2. Web Layout Design & Cyber Theme
 st.set_page_config(page_title="Aryan Robot Coach", page_icon="🤖", layout="wide")
 
-# Custom UI Theme Styles Separated to prevent string termination crashes
+# Custom UI Theme Styles Variable
 robot_css = """
 <style>
     .auth-box {
@@ -130,7 +130,7 @@ if "auth_mode" not in st.session_state:
 if "voice_input" not in st.session_state:
     st.session_state.voice_input = ""
 
-# 🔑 AUTHENTICATION CONFIGURATION NODE
+# 🔑 SECURE ISOLATED AUTH PORTAL (No Javascript interferes here!)
 if not st.session_state.logged_in:
     
     # --- 1. LOGIN MODE ---
@@ -142,7 +142,8 @@ if not st.session_state.logged_in:
             login_input = st.text_input("Username or Email ID", key="lin_u", placeholder="Enter username or email...").strip().lower()
             login_pass = st.text_input("Password", type="password", key="lin_p", placeholder="Enter password...")
             
-            if st.button("Forgot Account details? 🔍", key="forgot_trigger"):
+            # 🎯 FIXED TRIGGER: Clean rerun logic to change mode immediately
+            if st.button("Forgot Account details? 🔍", key="forgot_trigger", use_container_width=True):
                 st.session_state.auth_mode = "forgot"
                 st.rerun()
             
@@ -170,3 +171,14 @@ if not st.session_state.logged_in:
                 st.rerun()
 
     # --- 2. SIGN UP MODE ---
+    elif st.session_state.auth_mode == "signup":
+        st.markdown('<div class="auth-box"><h2 style="color: #38bdf8; margin-bottom: 5px;">📝 CREATE NEW ACCOUNT</h2><p style="color: #94a3b8; font-size: 14px;">Password criteria: 8 to 12 characters only</p></div>', unsafe_allow_html=True)
+        
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            reg_name = st.text_input("Full Name", key="sig_n", placeholder="Enter your full name...")
+            reg_email = st.text_input("Email ID", key="sig_e", placeholder="Enter your email address...").strip().lower()
+            reg_user = st.text_input("Choose Username", key="sig_u", placeholder="Create unique username...").strip().lower()
+            reg_pass = st.text_input("Choose Password (8-12 chars)", type="password", key="sig_p", placeholder="Create password...")
+            
+            if st.button("Register &

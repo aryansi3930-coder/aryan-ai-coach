@@ -140,16 +140,16 @@ if not st.session_state.logged_in:
     
     # --- 1. LOGIN MODE ---
     if st.session_state.auth_mode == "login":
-        st.markdown('<div class="auth-box"><h2 style="color: #38bdf8; margin-bottom: 5px;">🤖 ARYAN AI SIGN IN</h2></div>', unsafe_allow_html=True)
+        st.markdown('<div class="auth-box"><h2 style="color: #38bdf8; margin-bottom: 5px;">ARYAN AI SIGN IN</h2></div>', unsafe_allow_html=True)
         
-        login_input = st.text_input("Username or Email ID", key="lin_u", placeholder="Enter username or email...").strip().lower()
-        login_pass = st.text_input("Password", type="password", key="lin_p", placeholder="Enter password...")
+        login_input = st.text_input("Username or Email ID", key="lin_u", placeholder="Enter details").strip().lower()
+        login_pass = st.text_input("Password", type="password", key="lin_p", placeholder="Enter password")
         
-        if st.button("Forgot Details? 🔍", key="forgot_trigger", use_container_width=True):
+        if st.button("Forgot Details?", key="forgot_trigger", use_container_width=True):
             st.session_state.auth_mode = "forgot"
             st.rerun()
         
-        if st.button("Unlock Session 🔓", use_container_width=True):
+        if st.button("Unlock Session", use_container_width=True):
             if login_input == "" or login_pass == "":
                 st.warning("Please fill in all fields!")
             else:
@@ -168,20 +168,20 @@ if not st.session_state.logged_in:
                     st.error("Invalid Credentials!")
         
         st.write("---")
-        if st.button("Create Account (Sign Up) 📝", use_container_width=True):
+        if st.button("Create Account (Sign Up)", use_container_width=True):
             st.session_state.auth_mode = "signup"
             st.rerun()
 
     # --- 2. SIGN UP MODE ---
     elif st.session_state.auth_mode == "signup":
-        st.markdown('<div class="auth-box"><h2 style="color: #38bdf8; margin-bottom: 5px;">📝 CREATE ACCOUNT</h2></div>', unsafe_allow_html=True)
+        st.markdown('<div class="auth-box"><h2 style="color: #38bdf8; margin-bottom: 5px;">CREATE ACCOUNT</h2></div>', unsafe_allow_html=True)
         
-        reg_name = st.text_input("Full Name", key="sig_n", placeholder="Your name...")
-        reg_email = st.text_input("Email ID", key="sig_e", placeholder="Your email...").strip().lower()
-        reg_user = st.text_input("Username", key="sig_u", placeholder="Unique username...").strip().lower()
-        reg_pass = st.text_input("Password (8-12 chars)", type="password", key="sig_p", placeholder="Create password...")
+        reg_name = st.text_input("Full Name", key="sig_n", placeholder="Your name")
+        reg_email = st.text_input("Email ID", key="sig_e", placeholder="Your email").strip().lower()
+        reg_user = st.text_input("Username", key="sig_u", placeholder="Unique username").strip().lower()
+        reg_pass = st.text_input("Password (8-12 chars)", type="password", key="sig_p", placeholder="Create password")
         
-        if st.button("Register Profile 🚀", use_container_width=True):
+        if st.button("Register Profile", use_container_width=True):
             email_exists = any(data["email"] == reg_email for data in st.session_state.user_db.values())
             
             if reg_name == "" or reg_email == "" or reg_user == "" or reg_pass == "":
@@ -205,16 +205,16 @@ if not st.session_state.logged_in:
                 st.rerun()
         
         st.write("---")
-        if st.button("Back to Login 🔒", use_container_width=True):
+        if st.button("Back to Login", use_container_width=True):
             st.session_state.auth_mode = "login"
             st.rerun()
 
-    # --- 3. RECOVERY MODE (Ab 100% chalega tester data ke sath) ---
+    # --- 3. RECOVERY MODE ---
     elif st.session_state.auth_mode == "forgot":
-        st.markdown('<div class="auth-box"><h2 style="color: #f59e0b; margin-bottom: 5px;">🔍 RECOVER</h2></div>', unsafe_allow_html=True)
+        st.markdown('<div class="auth-box"><h2 style="color: #f59e0b; margin-bottom: 5px;">RECOVER</h2></div>', unsafe_allow_html=True)
         forgot_email = st.text_input("Enter Email ID", key="for_e").strip().lower()
         
-        if st.button("Recover Details 🛠️", use_container_width=True):
+        if st.button("Recover Details", use_container_width=True):
             user_found = None
             for u, data in st.session_state.user_db.items():
                 if data["email"] == forgot_email:
@@ -223,26 +223,26 @@ if not st.session_state.logged_in:
             
             if user_found:
                 st.success("Account Located!")
-                st.info(f"👉 **Username:** `{user_found}` | **Password:** `{st.session_state.user_db[user_found]['password']}`")
+                st.info(f"Username: {user_found} | Password: {st.session_state.user_db[user_found]['password']}")
             else:
                 st.error("Email not found in system cache!")
                     
-        if st.button("Back to Login 🔒", use_container_width=True):
+        if st.button("Back to Login", use_container_width=True):
             st.session_state.auth_mode = "login"
             st.rerun()
     st.stop()
 
 # 🔓 MAIN ROBOT DASHBOARD PANEL
-st.title("🤖 Aryan AI: Clickable Cyber-Robot Mentor")
-st.caption(f"Profile Session: 👤 {st.session_state.current_user}")
+st.title("Aryan AI: Clickable Cyber-Robot Mentor")
+st.caption(f"Profile Session: {st.session_state.current_user}")
 
-if st.sidebar.button("Log Out Securely 🚪", use_container_width=True):
+if st.sidebar.button("Log Out Securely", use_container_width=True):
     st.session_state.logged_in = False
     st.session_state.current_user = ""
     st.session_state.auth_mode = "login"
     st.rerun()
 
-st.sidebar.markdown("### 📊 Profile Analytics")
+st.sidebar.markdown("### Profile Analytics")
 total_chats = len(st.session_state.chat_history_logs)
 if total_chats > 0:
     total_errors = sum(1 for log in st.session_state.chat_history_logs if log["mistake"] == 1)
@@ -262,7 +262,7 @@ st.markdown("""
         <div class="robot-body-frame">
             <div class="robot-core"></div>
         </div>
-        <div id="status-text" class="bot-status">👇 TAP MY BODY TO TALK</div>
+        <div id="status-text" class="bot-status">TAP MY BODY TO TALK</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -276,7 +276,7 @@ recognition.interimResults = false;
 function startListening() {
     const status = document.getElementById("status-text");
     if(status) {
-        status.innerHTML = "🔴 LISTENING... SPEAK NOW!";
+        status.innerHTML = "LISTENING... SPEAK NOW!";
         status.style.color = "#ef4444";
         status.style.textShadow = "0 0 10px #ef4444";
     }
@@ -291,7 +291,7 @@ recognition.onresult = function(event) {
 recognition.onerror = function() {
     const status = document.getElementById("status-text");
     if(status) {
-        status.innerHTML = "❌ TRY AGAIN: TAP HERE";
+        status.innerHTML = "TRY AGAIN: TAP HERE";
         status.style.color = "#f43f5e";
     }
 };
@@ -324,3 +324,20 @@ if spoken_text and spoken_text != st.session_state.voice_input:
     var msg = new SpeechSynthesisUtterance("{clean_reply}");
     msg.lang = 'en-US';
     msg.pitch = 0.85;
+    msg.rate = 1.0;
+    window.speechSynthesis.speak(msg);
+    
+    const status = document.getElementById("status-text");
+    if(status) {{
+        status.innerHTML = "TAP MY BODY TO TALK";
+        status.style.color = "#38bdf8";
+        status.style.textShadow = "0 0 8px rgba(56, 189, 248, 0.6)";
+    }}
+    </script>
+    """
+    st.markdown(html_audio_script, unsafe_allow_html=True)
+
+    mistake_flag = 1 if "mistake" in ai_reply.lower() or "wrong" in ai_reply.lower() else 0
+    st.session_state.chat_history_logs.append({"user_msg": spoken_text, "ai_reply": ai_reply, "mistake": mistake_flag})
+    
+    st.rerun()
